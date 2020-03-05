@@ -21,10 +21,10 @@ class Property(object):
 
     def __set__(self, instance, value):
         value = self.validate(value)
-        instance.__datastore_data__[self.name] = value
+        instance.__datastore_entity__[self.name] = value
 
     def __get__(self, instance, owner):
-        value = instance.__datastore_data__.get(self.name)
+        value = instance.__datastore_entity__.get(self.name)
         value = self.user_value(value)
         return value
 
