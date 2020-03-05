@@ -70,8 +70,16 @@ class Entity(object):
 
 
 class Query(object):
-    def __init__(self, entity):
-        self.__datastore_query: DatastoreQuery = Entity.__get_client__().query(kind=entity.__entity_name__())
+    def __init__(self, entity, keys_only=False, eventual=False, limit=None, order_by=None):
+        self.__datastore_query: DatastoreQuery = Entity.__get_client__().query(kind=entity.__entity_name__(),
+                                                                               order=order_by)
+        self.entity = entity
+        self.keys_only = keys_only
+        if keys_only:
+            self.__datastore_query.keys_only()
+        self.limit = limit
+        self.eventual = eventual
+        self.__iterator = None
 
     def equal(self, field, value):
         self.__datastore_query.add_filter(field, '=', value)
@@ -92,6 +100,24 @@ class Query(object):
     def lte(self, field, value):
         self.__datastore_query.add_filter(field, '<=', value)
         return self
+
+    def fetch(self):
+        return [entity for entity in self]
+
+    def __process_result_item(self, result_item):
+        if self.keys_only:
+            return Key.from_legacy_urlsafe(result_item.to_legacy_urlsafe())  # Return customized key
+        entity = self.entity(id=result_item.id)
+        entity.__datastore_entity__ = result_item
+        return entity
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.__iterator:
+            self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual)
+        return self.__process_result_item(self.__iterator.__next__())
 
 
 class Key(DatastoreKey):
