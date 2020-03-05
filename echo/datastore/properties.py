@@ -1,4 +1,4 @@
-from echo.datastore.db import InvalidValueError
+from echo.datastore.errors import InvalidValueError
 from datetime import datetime
 
 
