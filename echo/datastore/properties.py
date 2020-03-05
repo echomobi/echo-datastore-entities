@@ -1,4 +1,4 @@
-from echo.db import InvalidValueError
+from echo.datastore.db import InvalidValueError
 from datetime import datetime
 
 
@@ -74,8 +74,8 @@ class IntegerProperty(Property):
 
 
 class DateTimeProperty(Property):
-    def __init__(self, auto_add_now=False, required=False):
-        default = datetime.now() if auto_add_now else None
+    def __init__(self, auto_now_add=False, required=False):
+        default = datetime.now() if auto_now_add else None
         super(DateTimeProperty, self).__init__(default=default, required=required)
 
     def validate(self, user_value):

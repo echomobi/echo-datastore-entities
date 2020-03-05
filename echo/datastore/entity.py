@@ -122,7 +122,7 @@ class Query(object):
 
 class Key(DatastoreKey):
     def __repr__(self):
-        return self.to_legacy_urlsafe()
+        return self.to_legacy_urlsafe().decode('utf-8')
 
     def __str__(self):
         return self.__repr__()
