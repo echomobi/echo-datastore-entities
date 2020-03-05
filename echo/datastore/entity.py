@@ -1,5 +1,5 @@
 from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey, Query as DatastoreQuery
-import builtins
+from future import builtins
 
 
 class Entity(object):
@@ -45,8 +45,8 @@ class Entity(object):
             return entity
 
     @classmethod
-    def query(cls, limit=None):
-        pass
+    def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
+        return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
 
     @classmethod
     def get_by_id(cls, key):
@@ -57,7 +57,7 @@ class Entity(object):
         return cls.__name__
 
     @staticmethod
-    def __get_client__() -> Client:
+    def __get_client__():
         if not hasattr(builtins, "__datastore_client__"):
             setattr(builtins, "__datastore_client__", Client())
         return getattr(builtins, "__datastore_client__")
@@ -71,8 +71,12 @@ class Entity(object):
 
 class Query(object):
     def __init__(self, entity, keys_only=False, eventual=False, limit=None, order_by=None):
-        self.__datastore_query: DatastoreQuery = Entity.__get_client__().query(kind=entity.__entity_name__(),
-                                                                               order=order_by)
+        order = []
+        if isinstance(order_by, (list, tuple)):
+            order = order_by
+        elif isinstance(order_by, str):
+            order = [str]
+        self.__datastore_query = Entity.__get_client__().query(kind=entity.__entity_name__(), order=order)
         self.entity = entity
         self.keys_only = keys_only
         if keys_only:
@@ -116,8 +120,14 @@ class Query(object):
 
     def __next__(self):
         if not self.__iterator:
-            self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual)
+            self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
         return self.__process_result_item(self.__iterator.__next__())
+
+    def next(self):
+        # Support python2 iterators
+        if not self.__iterator:
+            self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
+        return self.__process_result_item(self.__iterator.next())
 
 
 class Key(DatastoreKey):
