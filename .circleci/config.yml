@@ -1,0 +1,49 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@0.2.1
+
+jobs:
+  build-and-test:
+    executor: python/default
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+    steps:
+      - checkout
+      - restore_cache:
+          name: Restore python cache
+          keys:
+            - requirements-python3-{{ checksum "requirements.txt" }}
+
+      - run:
+          name: Create venv and install requirements
+          command: |
+            if [ -e ./venv ]; then
+              echo "Using cached venv"
+            else
+              echo "Creating venv"
+              python3.7 -m venv venv
+              echo "Install requirements"
+              . venv/bin/activate && pip install -r requirements.txt && deactivate
+            fi
+
+      - save_cache:
+          name: Save python cache
+          paths:
+            - ./venv
+
+      - run:
+          name: Start Datastore Emulator
+          command: gcloud beta emulators datastore env-init
+          background: true
+
+      - run:
+          command: . venv/bin/activate && coverage tests/run.py && deactivate
+          name: Run Tests
+
+
+workflows:
+  main:
+    jobs:
+      - build-and-test
