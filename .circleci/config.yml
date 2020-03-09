@@ -1,8 +1,7 @@
 version: 2
 
 jobs:
-  build-and-test:
-    executor: python/default
+  build:
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
@@ -11,7 +10,7 @@ jobs:
       - restore_cache:
           name: Restore python cache
           keys:
-            - requirements-python3-{{ checksum "requirements.txt" }}
+            - requirements-{{ checksum "requirements.txt" }}
 
       - run:
           name: Create venv and install requirements
@@ -27,6 +26,7 @@ jobs:
 
       - save_cache:
           name: Save python cache
+          key: requirements-{{ checksum "requirements.txt" }}
           paths:
             - ./venv
 
