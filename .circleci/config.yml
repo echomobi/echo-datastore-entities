@@ -6,7 +6,13 @@ jobs:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
     steps:
+      - run:
+          name: Start Datastore Emulator
+          command: gcloud beta emulators datastore start
+          background: true
+
       - checkout
+
       - restore_cache:
           name: Restore python cache
           keys:
@@ -31,10 +37,5 @@ jobs:
             - ./venv
 
       - run:
-          name: Start Datastore Emulator
-          command: gcloud beta emulators datastore env-init
-          background: true
-
-      - run:
-          command: . venv/bin/activate && coverage tests/run.py && deactivate
+          command: . venv/bin/activate && coverage run tests/run.py && deactivate
           name: Run Tests
