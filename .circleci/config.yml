@@ -47,7 +47,7 @@ jobs:
       - run:
           command: |
             $(gcloud beta emulators datastore env-init)
-            . venv/bin/activate && coverage run tests/run.py && deactivate
-            $(gcloud beta emulators datastore env-unset)
-            bash <(curl -s https://codecov.io/bash)
+            . venv/bin/activate
+            coverage run tests/run.py
+            codecov
           name: Run Tests
