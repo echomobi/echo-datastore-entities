@@ -4,9 +4,9 @@ coverage:
       default:
         target: 100%
     project:
-      app:  # declare a new status context "app"
+      lib:  # Library code coverage by tests
         target: 100%
         paths: "!tests/"  # ignore all files covered in tests/
-      tests:
+      tests:  # Code cleanliness of tests
         target: 100%  # All tests should be covered
         paths: "tests/"  # only include coverage in "tests/" folder
