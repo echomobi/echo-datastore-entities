@@ -4,6 +4,7 @@ jobs:
   build:
     environment:
       CLOUDSDK_CORE_PROJECT: "test-project"
+      GOOGLE_APPLICATION_CREDENTIALS: "service_account.json"
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
@@ -14,6 +15,11 @@ jobs:
           background: true
 
       - checkout
+
+      # adds a dummy service key to allow creation of a client for testing
+      - run:
+          name: Add Service Account
+          command: echo $FAKE_SERVICE_ACCOUNT>service_account.json
 
       - restore_cache:
           name: Restore python cache
