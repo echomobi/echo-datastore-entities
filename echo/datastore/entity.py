@@ -1,6 +1,17 @@
 from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey, Query as DatastoreQuery
 from future import builtins
 from echo.datastore import errors
+from echo.datastore import properties
+
+
+class BaseEntityMeta(type):
+    # Needed to support setting property names on python2
+    def __new__(mcls, name, bases, attrs):
+        cls = super(BaseEntityMeta, mcls).__new__(mcls, name, bases, attrs)
+        for attr, obj in attrs.items():
+            if isinstance(obj, properties.Property):
+                obj.__set_name__(cls, attr)
+        return cls
 
 
 class Entity(object):
@@ -13,6 +24,7 @@ class Entity(object):
         id (str or int): Unique id identifying this record,
             if auto-generated, this is not available before `put()`
     """
+    __metaclass__ = BaseEntityMeta
 
     def __init__(self, **data):
         if type(self) is Entity:
