@@ -8,3 +8,8 @@ class InvalidValueError(ValueError):
     def __str__(self):
         return "%s is not a valid value for property %s of type %s" % \
                (self.value, self.property.name, type(self.property).__name__)
+
+
+class NotSavedException(Exception):
+    def __str__(self):
+        return "You can't read a key of an unsaved entity"

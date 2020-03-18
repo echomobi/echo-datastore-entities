@@ -1,5 +1,6 @@
 from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey, Query as DatastoreQuery
 from future import builtins
+from echo.datastore import errors
 
 
 class Entity(object):
@@ -19,12 +20,14 @@ class Entity(object):
         self.__id = None
         if "id" in data:
             self.__id = data.get("id")
-        self.__datastore_entity__ = DatastoreEntity(key=self.key())
+        self.__datastore_entity__ = DatastoreEntity(key=self.key(partial=True))
         for key, value in data.items():
             setattr(self, key, value)
 
-    def key(self):
+    def key(self, partial=False):
         paths = [self.__entity_name__()]
+        if not self.__id and not partial:
+            raise errors.NotSavedException()
         if self.__id:
             paths.append(self.__id)
         project = Entity.__get_client__().project
