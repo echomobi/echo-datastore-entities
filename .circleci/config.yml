@@ -21,28 +21,32 @@ jobs:
           name: Add Service Account
           command: echo $FAKE_SERVICE_ACCOUNT>service_account.json
 
+      # Update cache version when requirements have not changed but different files are needed for the cache
       - restore_cache:
           name: Restore python cache
           keys:
-            - requirements-{{ checksum "requirements.txt" }}
+            - requirements-v1-{{ checksum "requirements.txt" }}
 
       - run:
-          name: Create venv and install requirements
+          name: Create venv and install requirements for python 2 & 3
           command: |
             if [ -e ./venv ]; then
               echo "Using cached venv"
             else
-              echo "Creating venv"
+              echo "Creating venv and installing requirements for python 3"
               python3.7 -m venv venv
-              echo "Install requirements"
               . venv/bin/activate && pip install -r requirements.txt && deactivate
+              echo "Creating venv and installing requirements for python 2"
+              python2.7 -m virtualenv venv2
+              . venv2/bin/activate && pip install -r requirements.txt && deactivate
             fi
 
       - save_cache:
           name: Save python cache
-          key: requirements-{{ checksum "requirements.txt" }}
+          key: requirements-v1-{{ checksum "requirements.txt" }}
           paths:
             - ./venv
+            - ./venv2
 
       - run:
           command: |
@@ -50,4 +54,12 @@ jobs:
             . venv/bin/activate
             coverage run tests/run.py
             codecov
-          name: Run Tests
+          name: ++ Run Tests on Python 3
+
+      - run:
+          command: |
+            $(gcloud beta emulators datastore env-init)
+            . venv2/bin/activate
+            coverage run tests/run.py
+            codecov
+          name: ++ Run Tests on Python 2
