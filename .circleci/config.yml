@@ -60,6 +60,5 @@ jobs:
           command: |
             $(gcloud beta emulators datastore env-init)
             . venv2/bin/activate
-            coverage run tests/run.py
-            codecov
+            python tests/run.py
           name: ++ Run Tests on Python 2
