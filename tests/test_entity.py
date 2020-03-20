@@ -9,7 +9,7 @@ class TestEntity(Entity):
     prop2 = db.IntegerProperty()
 
 
-class TestEntityTestCase(unittest.TestCase, Entity):
+class TestEntityTestCase(unittest.TestCase):
     def test_client(self):
         self.assertIsInstance(Entity.__get_client__(), Client)
 
