@@ -39,6 +39,8 @@ class TestEntityTestCase(unittest.TestCase):
         entity = DatastoreEntity(key)
         entity["prop1"] = "Text Value"
         entity["prop2"] = 10
+        client.put(entity)
+
         key_string = key.to_legacy_urlsafe().decode("utf-8")
         test_entity = TestEntity.get(key_string)
         self.assertEqual(str(test_entity.key()), key_string)
