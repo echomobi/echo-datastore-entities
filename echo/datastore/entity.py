@@ -1,4 +1,5 @@
-from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey, Query as DatastoreQuery
+from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey
+from six import string_types, python_2_unicode_compatible
 from future import builtins
 from echo.datastore import errors
 from echo.datastore import properties
@@ -51,7 +52,7 @@ class Entity(object):
 
     @classmethod
     def get(cls, key):
-        if isinstance(key, str):
+        if isinstance(key, string_types):
             key = Key.from_legacy_urlsafe(key)
         ds_entity = Entity.__get_client__().get(key=key)
         if ds_entity:
