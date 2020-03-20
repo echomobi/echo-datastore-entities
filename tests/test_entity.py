@@ -1,7 +1,7 @@
 import unittest
 from echo.datastore import Entity, db
 from echo.datastore import errors
-from google.cloud.datastore.client import Client, Key
+from google.cloud.datastore.client import Client, Key, Entity as DatastoreEntity
 
 
 class TestEntity(Entity):
@@ -32,3 +32,15 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertEqual(entity.key().id, 10)
         self.assertEqual(expected_key.id, entity.key().id)
         # TODO: Test for key generation after put
+
+    def test_get(self):
+        client = Client()
+        key = client.key('TestEntity', 10)
+        entity = DatastoreEntity(key)
+        entity["prop1"] = "Text Value"
+        entity["prop2"] = 10
+        key_string = key.to_legacy_urlsafe().decode("utf-8")
+        test_entity = TestEntity.get(key_string)
+        self.assertEqual(str(test_entity.key()), key_string)
+        self.assertEqual(test_entity.prop1, "Text Value")
+        self.assertEqual(test_entity.prop2, 10)
