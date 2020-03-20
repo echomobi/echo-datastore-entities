@@ -3,7 +3,6 @@ version: 2
 jobs:
   build:
     environment:
-      CLOUDSDK_CORE_PROJECT: "test-project"
       GOOGLE_APPLICATION_CREDENTIALS: "service_account.json"
     docker:
       - image: echomobi/echomobile-ci:v1.2
@@ -11,7 +10,7 @@ jobs:
     steps:
       - run:
           name: Start Datastore Emulator
-          command: gcloud beta emulators datastore start
+          command: gcloud beta emulators datastore start --project=test --consistency=1.0 --host-port=0.0.0.0:8090 --no-store-on-disk
           background: true
 
       - checkout
