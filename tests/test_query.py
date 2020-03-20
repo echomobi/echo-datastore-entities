@@ -51,4 +51,36 @@ class QueryTestCase(unittest.TestCase):
 
     def test_greater_than(self):
         entities = TestEntity.query().gt("prop2", 30).fetch()
-        
+        self.assertEqual(len(entities), 19)
+        for entity in entities:
+            self.assertTrue(entity.prop2 > 30)
+
+    def test_greater_than_or_equal_to(self):
+        entities = TestEntity.query().gte("prop2", 30).fetch()
+        self.assertEqual(len(entities), 20)
+        for entity in entities:
+            self.assertTrue(entity.prop2 >= 30)
+
+    def test_less_than(self):
+        entities = TestEntity.query().lt("prop2", 20).fetch()
+        self.assertEqual(len(entities), 20)
+        for entity in entities:
+            self.assertTrue(entity.prop2 < 20)
+
+    def test_less_than_or_equal_to(self):
+        entities = TestEntity.query().lte("prop2", 20).fetch()
+        self.assertEqual(len(entities), 21)
+        for entity in entities:
+            self.assertTrue(entity.prop2 <= 20)
+
+    def test_compound_query(self):
+        entities = TestEntity.query().gte("prop2", 20).lt("prop2", 30).fetch()
+        self.assertEqual(len(entities), 10)
+        for entity in entities:
+            self.assertTrue(20 <= entity.prop2 < 30)
+
+        odd_entities = TestEntity.query().lte("prop2", 20).equal("prop1", "Odd").fetch()
+        self.assertEqual(len(odd_entities), 10)
+        for entity in odd_entities:
+            self.assertEqual(entity.prop1, "Odd")
+            self.assertTrue(entity.prop2 <= 20)
