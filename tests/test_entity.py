@@ -34,6 +34,7 @@ class TestEntityTestCase(unittest.TestCase):
         # TODO: Test for key generation after put
 
     def test_get(self):
+        # Write entity via Google's API
         client = Client()
         key = client.key('TestEntity', 10)
         entity = DatastoreEntity(key)
@@ -41,6 +42,7 @@ class TestEntityTestCase(unittest.TestCase):
         entity["prop2"] = 10
         client.put(entity)
 
+        # Read via our wrapper
         key_string = key.to_legacy_urlsafe().decode("utf-8")
         test_entity = TestEntity.get(key_string)
         self.assertEqual(str(test_entity.key()), key_string)
