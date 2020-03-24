@@ -57,10 +57,6 @@ class Entity(object):
         project = Entity.__get_client__().project
         return Key(*paths, project=project)
 
-    def put(self):
-        self.post_put()
-        self.pre_put()
-
     @classmethod
     def get(cls, key):
         """
@@ -136,12 +132,6 @@ class Entity(object):
         if not hasattr(builtins, "__datastore_client__"):
             setattr(builtins, "__datastore_client__", Client())
         return getattr(builtins, "__datastore_client__")
-
-    def post_put(self):
-        """Override this method if you have actions that want to run after saving the entity"""
-
-    def pre_put(self):
-        """Override this method if you have actions that want to run before saving the entity"""
 
 
 class Query(object):
