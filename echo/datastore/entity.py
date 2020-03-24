@@ -38,6 +38,17 @@ class Entity(object):
             setattr(self, key, value)
 
     def key(self, partial=False):
+        """Generates a key for this Entity
+        Args:
+            partial: Returns a partial key if an ID doesn't exist
+
+        Returns:
+            An instance of a key, convert to string to get a urlsafe key
+
+        Raises:
+            NotSavedException: Raised if reading a key of an unsaved entity unless partial is true or the ID is
+            explicitly provided
+        """
         paths = [self.__entity_name__()]
         if not self.__id and not partial:
             raise NotSavedException()
@@ -93,7 +104,7 @@ class Entity(object):
 
             Returns None if the id doesn't exist in the database
         """
-        key = Key(cls.__name__, entity_id)
+        key = Key(cls.__name__, entity_id, project=cls.__get_client__().project)
         return cls.get(key)
 
     @classmethod
