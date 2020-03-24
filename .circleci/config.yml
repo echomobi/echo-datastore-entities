@@ -1,0 +1,66 @@
+version: 2
+
+jobs:
+  build:
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: "service_account.json"
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+    steps:
+      - run:
+          name: Start Datastore Emulator
+          command: gcloud beta emulators datastore start --project=test --consistency=1.0 --host-port=0.0.0.0:8090 --no-store-on-disk
+          background: true
+
+      - checkout
+
+      # adds a dummy service key to allow creation of a client for testing
+      - run:
+          name: Add Service Account
+          command: echo $FAKE_SERVICE_ACCOUNT>service_account.json
+
+      # Update cache version when requirements have not changed but different files are needed for the cache
+      - restore_cache:
+          name: Restore python cache
+          keys:
+            - requirements-v1-{{ checksum "requirements.txt" }}
+
+      - run:
+          name: Create venv and install requirements for python 2 & 3
+          command: |
+            if [ -e ./venv ]; then
+              echo "Using cached venv"
+            else
+              echo "Creating venv and installing requirements for python 3"
+              python3.7 -m venv venv
+              . venv/bin/activate && pip install -r requirements.txt && deactivate
+              echo "Creating venv and installing requirements for python 2"
+              python2.7 -m virtualenv venv2
+              . venv2/bin/activate && pip install -r requirements.txt && deactivate
+            fi
+
+      - save_cache:
+          name: Save python cache
+          key: requirements-v1-{{ checksum "requirements.txt" }}
+          paths:
+            - ./venv
+            - ./venv2
+
+      - run:
+          command: |
+            $(gcloud beta emulators datastore env-init)
+            . venv/bin/activate
+            coverage run tests/run.py
+          name: ++ Run Tests on Python 3
+
+      - run:
+          command: |
+            $(gcloud beta emulators datastore env-init)
+            . venv2/bin/activate
+            python tests/run.py
+          name: ++ Run Tests on Python 2
+
+      - run:
+          command: . venv/bin/activate && codecov
+          name: ++ Report Coverage
