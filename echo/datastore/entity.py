@@ -1,7 +1,7 @@
 from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey
-from six import string_types, python_2_unicode_compatible
+from six import string_types
 from future import builtins
-from echo.datastore import errors
+from echo.datastore.errors import InvalidKeyError, NotSavedException
 from echo.datastore import properties
 
 
@@ -40,7 +40,7 @@ class Entity(object):
     def key(self, partial=False):
         paths = [self.__entity_name__()]
         if not self.__id and not partial:
-            raise errors.NotSavedException()
+            raise NotSavedException()
         if self.__id:
             paths.append(self.__id)
         project = Entity.__get_client__().project
@@ -52,8 +52,28 @@ class Entity(object):
 
     @classmethod
     def get(cls, key):
+        """
+        Get an entity with the specified key
+
+        Args:
+            key: A urlsafe key string or an instance of a Key
+
+        Returns:
+            An instance of the entity with the provided id
+
+            Returns None if the id doesn't exist in the database
+
+        Raises:
+            InvalidKeyError: Raised if the key provided is invalid for this entity
+        """
         if isinstance(key, string_types):
-            key = Key.from_legacy_urlsafe(key)
+            try:
+                key = Key.from_legacy_urlsafe(key)
+            except Exception:
+                raise InvalidKeyError(cls)
+
+        if not isinstance(key, Key) or cls.__entity_name__() != key.__get_entity__():
+            raise InvalidKeyError(cls)
         ds_entity = Entity.__get_client__().get(key=key)
         if ds_entity:
             entity = cls(id=key.id_or_name)
@@ -61,12 +81,24 @@ class Entity(object):
             return entity
 
     @classmethod
-    def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
-        return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
+    def get_by_id(cls, entity_id):
+        """
+        Get an entity with a specified ID(Integer) or Name(String).
+
+        Args:
+            entity_id: An integer(id) or string(name) uniquely identifying the object
+
+        Returns:
+            An instance of the entity with the provided id
+
+            Returns None if the id doesn't exist in the database
+        """
+        key = Key(cls.__name__, entity_id)
+        return cls.get(key)
 
     @classmethod
-    def get_by_id(cls, key):
-        pass
+    def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
+        return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
 
     @classmethod
     def __entity_name__(cls):
@@ -152,3 +184,6 @@ class Key(DatastoreKey):
 
     def __str__(self):
         return self.__repr__()
+
+    def __get_entity__(self):
+        return self.path[0]
