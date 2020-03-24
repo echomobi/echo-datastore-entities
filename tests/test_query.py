@@ -34,7 +34,7 @@ class QueryTestCase(unittest.TestCase):
             count += 1
 
     def test_order_and_limit(self):
-        limit = randint(2, 20)
+        limit = 20
         entities = TestEntity.query(limit=limit, order_by=["prop2"]).fetch()
         self.assertEqual(len(entities), limit)
         for i in range(limit):

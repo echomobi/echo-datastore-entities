@@ -1,6 +1,6 @@
 import unittest
 from echo.datastore import Entity, db
-from echo.datastore import errors
+from echo.datastore.errors import NotSavedException, InvalidKeyError, InvalidValueError
 from google.cloud.datastore.client import Client, Key, Entity as DatastoreEntity
 
 
@@ -20,10 +20,17 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertEqual(entity.__datastore_entity__.get("prop1"), "Text Value")
         self.assertEqual(entity.__datastore_entity__.get("prop2"), 1)
 
+    def test_invalid_values(self):
+        entity = TestEntity()
+        # Test setting invalid values
+        self.assertRaises(InvalidValueError, setattr, entity, "prop1", 10)  # Text property setting int
+        self.assertRaises(InvalidValueError, setattr, entity, "prop2", "text")  # Int property setting Text
+        self.assertRaises(InvalidValueError, setattr, entity, "prop2", 10.3)  # Int property setting Float
+
     def test_key_generation(self):
         entity = TestEntity()
         # You should not get a key for an unsaved entity
-        self.assertRaises(errors.NotSavedException, entity.key)
+        self.assertRaises(NotSavedException, entity.key)
 
         entity = TestEntity(id=10)
         project = Entity.__get_client__().project
@@ -46,3 +53,13 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertEqual(str(test_entity.key()), key_string)
         self.assertEqual(test_entity.prop1, "Text Value")
         self.assertEqual(test_entity.prop2, 10)
+
+        test_entity = TestEntity.get_by_id(10)
+        self.assertEqual(str(test_entity.key()), key_string)
+        # Un existing ID should just return null
+        self.assertIsNone(TestEntity.get_by_id(110))
+
+        self.assertRaises(InvalidKeyError, TestEntity.get, "INVALID_KEY")
+        self.assertRaises(InvalidKeyError, TestEntity.get, 10)
+        self.assertRaises(InvalidKeyError, TestEntity.get,
+                          Key('AnotherEntity', 10, project=Entity.__get_client__().project))
