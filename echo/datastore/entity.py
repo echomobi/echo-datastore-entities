@@ -233,7 +233,8 @@ class Query(object):
 
     def __process_result_item(self, result_item):
         if self.keys_only:
-            return Key.from_legacy_urlsafe(result_item.to_legacy_urlsafe())  # Return customized key
+            # The result is a datastore entity with only a key
+            return Key(result_item.kind, result_item.id, project=Entity.__get_client__().project)
         entity = self.entity(id=result_item.id)
         entity.__datastore_entity__ = result_item
         return entity

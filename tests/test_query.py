@@ -1,6 +1,6 @@
 import unittest
 from echo.datastore import db
-from google.cloud.datastore import Client, Entity as DatastoreEntity
+from google.cloud.datastore import Client, Entity as DatastoreEntity, Key
 from random import randint
 
 
@@ -22,6 +22,13 @@ class QueryTestCase(unittest.TestCase):
     def test_empty_query_returns_all_data(self):
         results = TestEntity.query().fetch()
         self.assertEqual(len(results), 50)
+
+    def test_keys_only(self):
+        i = 1
+        for key in TestEntity.query(keys_only=True, limit=10, order_by=["prop2"]):
+            self.assertIsInstance(key, Key)
+            self.assertEqual(key.id, i)
+            i += 1
 
     def test_reverse_order(self):
         count = 0
