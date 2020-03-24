@@ -109,6 +109,22 @@ class Entity(object):
 
     @classmethod
     def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
+        """
+        Filter entities based on certain conditions, an empty query will return all entities
+
+        Args:
+            limit: Maximum number of results to return, returns null by default
+            eventual:
+                Defaults to strongly consistent (False). Setting True will use eventual consistency,
+                but cannot be used inside a transaction or will raise ValueError
+            keys_only: Sets the results to include keys only
+            order_by:
+                A list of field names to order by, add `-` to order descending
+                e.g. ["name", "-age"]
+
+        Returns:
+            A iterable query instance; call fetch() to get the results as a list.
+        """
         return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
 
     @classmethod
@@ -145,26 +161,74 @@ class Query(object):
         self.__iterator = None
 
     def equal(self, field, value):
+        """
+        Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        """
         self.__datastore_query.add_filter(field, '=', value)
         return self
 
     def gt(self, field, value):
+        """
+        Greater Than filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        """
         self.__datastore_query.add_filter(field, '>', value)
         return self
 
     def gte(self, field, value):
+        """
+        Greater Than or Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        """
         self.__datastore_query.add_filter(field, '>=', value)
         return self
 
     def lt(self, field, value):
+        """
+        Less Than filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        """
         self.__datastore_query.add_filter(field, '<', value)
         return self
 
     def lte(self, field, value):
+        """
+        Less Than or Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        """
         self.__datastore_query.add_filter(field, '<=', value)
         return self
 
     def fetch(self):
+        """
+        Get Query results as a list
+        """
         return [entity for entity in self]
 
     def __process_result_item(self, result_item):
