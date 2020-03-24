@@ -72,7 +72,7 @@ class Entity(object):
             except Exception:
                 raise InvalidKeyError(cls)
 
-        if not isinstance(key, Key) or cls.__entity_name__() != key.__get_entity__():
+        if not isinstance(key, Key) or cls.__entity_name__() != key.kind:
             raise InvalidKeyError(cls)
         ds_entity = Entity.__get_client__().get(key=key)
         if ds_entity:
@@ -184,6 +184,3 @@ class Key(DatastoreKey):
 
     def __str__(self):
         return self.__repr__()
-
-    def __get_entity__(self):
-        return self.path[0]
