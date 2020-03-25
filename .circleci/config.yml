@@ -114,18 +114,21 @@ jobs:
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
-    branches:
-      only:
-        - master
     steps:
       - run:
           name: Build
-          command: echo "Build pip package here"
+          command: |
+            if [ $CIRCLE_BRANCH=="master" ]; then
+              echo "Build pip package here"
+            else
+              echo "Ignoring build on $CIRCLE_BRANCH"
+            fi
 
 workflows:
   version: 2
-  test-and-build:
-    - test
-    - deploy:
-        requires:
-          - test
+  test_and_build:
+    jobs:
+      - test
+      - deploy:
+          requires:
+            - test
