@@ -9,8 +9,9 @@ jobs:
     working_directory: ~/datastore-entities
     steps:
       - add_ssh_keys:
-          - fingerprints:
-              - "5d:f6:16:8c:c3:44:97:e2:09:6e:7e:f7:65:35:f9:80"
+          fingerprints:
+            - "5d:f6:16:8c:c3:44:97:e2:09:6e:7e:f7:65:35:f9:80"
+
       - run:
           name: Start Datastore Emulator
           command: gcloud beta emulators datastore start --project=test --consistency=1.0 --host-port=0.0.0.0:8090 --no-store-on-disk
