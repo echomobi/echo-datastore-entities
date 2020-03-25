@@ -89,11 +89,11 @@ jobs:
           name: ++ Push new docs (Triggers new build)
           command: |
             if [ -e PUSH_PLACEHOLDER ]; then
-              git status
+              git config --global user.name "Echo Mobile"
+              git config --global user.email "engineering@echomobile.io"
               git add docs/
-              git status
+              git commit -m "Docs Build $CIRCLE_BRANCH"
               git push origin $CIRCLE_BRANCH
-              git status
             else
               echo "Docs are upto date"
             fi
