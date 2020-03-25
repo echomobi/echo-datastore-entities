@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.7.5" />
+<title>echo.datastore.entity API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{font-weight:bold}#index h4 + ul{margin-bottom:.6em}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>echo.datastore.entity</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey
+from six import string_types
+from future import builtins
+from echo.datastore.errors import InvalidKeyError, NotSavedException
+from echo.datastore import properties
+
+
+class BaseEntityMeta(type):
+    # Needed to support setting property names on python2
+    def __new__(mcls, name, bases, attrs):
+        cls = super(BaseEntityMeta, mcls).__new__(mcls, name, bases, attrs)
+        for attr, obj in attrs.items():
+            if isinstance(obj, properties.Property):
+                obj.__set_name__(cls, attr)
+        return cls
+
+
+class Entity(object):
+    &#34;&#34;&#34;Creates a datastore document under the entity [EntityName]
+
+    Args:
+        **data (kwargs): Values for properties in the new record, e.g User(name=&#34;Bob&#34;)
+
+    Attributes:
+        id (str or int): Unique id identifying this record,
+            if auto-generated, this is not available before `put()`
+    &#34;&#34;&#34;
+    __metaclass__ = BaseEntityMeta
+
+    def __init__(self, **data):
+        if type(self) is Entity:
+            raise Exception(&#34;You must extend Entity&#34;)
+        self.__id = None
+        if &#34;id&#34; in data:
+            self.__id = data.get(&#34;id&#34;)
+        self.__datastore_entity__ = DatastoreEntity(key=self.key(partial=True))
+        for key, value in data.items():
+            setattr(self, key, value)
+
+    def key(self, partial=False):
+        &#34;&#34;&#34;Generates a key for this Entity
+        Args:
+            partial: Returns a partial key if an ID doesn&#39;t exist
+
+        Returns:
+            An instance of a key, convert to string to get a urlsafe key
+
+        Raises:
+            NotSavedException: Raised if reading a key of an unsaved entity unless partial is true or the ID is
+            explicitly provided
+        &#34;&#34;&#34;
+        paths = [self.__entity_name__()]
+        if not self.__id and not partial:
+            raise NotSavedException()
+        if self.__id:
+            paths.append(self.__id)
+        project = Entity.__get_client__().project
+        return Key(*paths, project=project)
+
+    @classmethod
+    def get(cls, key):
+        &#34;&#34;&#34;
+        Get an entity with the specified key
+
+        Args:
+            key: A urlsafe key string or an instance of a Key
+
+        Returns:
+            An instance of the entity with the provided id
+
+            Returns None if the id doesn&#39;t exist in the database
+
+        Raises:
+            InvalidKeyError: Raised if the key provided is invalid for this entity
+        &#34;&#34;&#34;
+        if isinstance(key, string_types):
+            try:
+                key = Key.from_legacy_urlsafe(key)
+            except Exception:
+                raise InvalidKeyError(cls)
+
+        if not isinstance(key, Key) or cls.__entity_name__() != key.kind:
+            raise InvalidKeyError(cls)
+        ds_entity = Entity.__get_client__().get(key=key)
+        if ds_entity:
+            entity = cls(id=key.id_or_name)
+            entity.__datastore_entity__ = ds_entity
+            return entity
+
+    @classmethod
+    def get_by_id(cls, entity_id):
+        &#34;&#34;&#34;
+        Get an entity with a specified ID(Integer) or Name(String).
+
+        Args:
+            entity_id: An integer(id) or string(name) uniquely identifying the object
+
+        Returns:
+            An instance of the entity with the provided id
+
+            Returns None if the id doesn&#39;t exist in the database
+        &#34;&#34;&#34;
+        key = Key(cls.__name__, entity_id, project=cls.__get_client__().project)
+        return cls.get(key)
+
+    @classmethod
+    def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
+        &#34;&#34;&#34;
+        Filter entities based on certain conditions, an empty query will return all entities
+
+        Args:
+            limit: Maximum number of results to return, returns null by default
+            eventual:
+                Defaults to strongly consistent (False). Setting True will use eventual consistency,
+                but cannot be used inside a transaction or will raise ValueError
+            keys_only: Sets the results to include keys only
+            order_by:
+                A list of field names to order by, add `-` to order descending
+                e.g. [&#34;name&#34;, &#34;-age&#34;]
+
+        Returns:
+            A iterable query instance; call fetch() to get the results as a list.
+        &#34;&#34;&#34;
+        return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
+
+    @classmethod
+    def __entity_name__(cls):
+        return cls.__name__
+
+    @staticmethod
+    def __get_client__():
+        if not hasattr(builtins, &#34;__datastore_client__&#34;):
+            setattr(builtins, &#34;__datastore_client__&#34;, Client())
+        return getattr(builtins, &#34;__datastore_client__&#34;)
+
+
+class Query(object):
+    def __init__(self, entity, keys_only=False, eventual=False, limit=None, order_by=None):
+        order = []
+        if isinstance(order_by, (list, tuple)):
+            order = order_by
+        elif isinstance(order_by, str):
+            order = [str]
+        self.__datastore_query = Entity.__get_client__().query(kind=entity.__entity_name__(), order=order)
+        self.entity = entity
+        self.keys_only = keys_only
+        if keys_only:
+            self.__datastore_query.keys_only()
+        self.limit = limit
+        self.eventual = eventual
+        self.__iterator = None
+
+    def equal(self, field, value):
+        &#34;&#34;&#34;
+        Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;=&#39;, value)
+        return self
+
+    def gt(self, field, value):
+        &#34;&#34;&#34;
+        Greater Than filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;&gt;&#39;, value)
+        return self
+
+    def gte(self, field, value):
+        &#34;&#34;&#34;
+        Greater Than or Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;&gt;=&#39;, value)
+        return self
+
+    def lt(self, field, value):
+        &#34;&#34;&#34;
+        Less Than filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;&lt;&#39;, value)
+        return self
+
+    def lte(self, field, value):
+        &#34;&#34;&#34;
+        Less Than or Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;&lt;=&#39;, value)
+        return self
+
+    def fetch(self):
+        &#34;&#34;&#34;
+        Get Query results as a list
+        &#34;&#34;&#34;
+        return [entity for entity in self]
+
+    def __process_result_item(self, result_item):
+        if self.keys_only:
+            # The result is a datastore entity with only a key
+            return Key(result_item.kind, result_item.id, project=Entity.__get_client__().project)
+        entity = self.entity(id=result_item.id)
+        entity.__datastore_entity__ = result_item
+        return entity
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.__iterator:
+            self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
+        return self.__process_result_item(self.__iterator.__next__())
+
+    def next(self):
+        # Support python2 iterators
+        if not self.__iterator:
+            self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
+        return self.__process_result_item(self.__iterator.next())
+
+
+class Key(DatastoreKey):
+    def __repr__(self):
+        return self.to_legacy_urlsafe().decode(&#39;utf-8&#39;)
+
+    def __str__(self):
+        return self.__repr__()</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="echo.datastore.entity.BaseEntityMeta"><code class="flex name class">
+<span>class <span class="ident">BaseEntityMeta</span></span>
+<span>(</span><span>name, bases, attrs)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>type(object_or_name, bases, dict)
+type(object) -&gt; the object's type
+type(name, bases, dict) -&gt; a new type</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class BaseEntityMeta(type):
+    # Needed to support setting property names on python2
+    def __new__(mcls, name, bases, attrs):
+        cls = super(BaseEntityMeta, mcls).__new__(mcls, name, bases, attrs)
+        for attr, obj in attrs.items():
+            if isinstance(obj, properties.Property):
+                obj.__set_name__(cls, attr)
+        return cls</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>builtins.type</li>
+</ul>
+</dd>
+<dt id="echo.datastore.entity.Entity"><code class="flex name class">
+<span>class <span class="ident">Entity</span></span>
+<span>(</span><span>**data)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Creates a datastore document under the entity [EntityName]</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>**data</code></strong> :&ensp;<code>kwargs</code></dt>
+<dd>Values for properties in the new record, e.g User(name="Bob")</dd>
+</dl>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
+<dd>Unique id identifying this record,
+if auto-generated, this is not available before <code>put()</code></dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Entity(object):
+    &#34;&#34;&#34;Creates a datastore document under the entity [EntityName]
+
+    Args:
+        **data (kwargs): Values for properties in the new record, e.g User(name=&#34;Bob&#34;)
+
+    Attributes:
+        id (str or int): Unique id identifying this record,
+            if auto-generated, this is not available before `put()`
+    &#34;&#34;&#34;
+    __metaclass__ = BaseEntityMeta
+
+    def __init__(self, **data):
+        if type(self) is Entity:
+            raise Exception(&#34;You must extend Entity&#34;)
+        self.__id = None
+        if &#34;id&#34; in data:
+            self.__id = data.get(&#34;id&#34;)
+        self.__datastore_entity__ = DatastoreEntity(key=self.key(partial=True))
+        for key, value in data.items():
+            setattr(self, key, value)
+
+    def key(self, partial=False):
+        &#34;&#34;&#34;Generates a key for this Entity
+        Args:
+            partial: Returns a partial key if an ID doesn&#39;t exist
+
+        Returns:
+            An instance of a key, convert to string to get a urlsafe key
+
+        Raises:
+            NotSavedException: Raised if reading a key of an unsaved entity unless partial is true or the ID is
+            explicitly provided
+        &#34;&#34;&#34;
+        paths = [self.__entity_name__()]
+        if not self.__id and not partial:
+            raise NotSavedException()
+        if self.__id:
+            paths.append(self.__id)
+        project = Entity.__get_client__().project
+        return Key(*paths, project=project)
+
+    @classmethod
+    def get(cls, key):
+        &#34;&#34;&#34;
+        Get an entity with the specified key
+
+        Args:
+            key: A urlsafe key string or an instance of a Key
+
+        Returns:
+            An instance of the entity with the provided id
+
+            Returns None if the id doesn&#39;t exist in the database
+
+        Raises:
+            InvalidKeyError: Raised if the key provided is invalid for this entity
+        &#34;&#34;&#34;
+        if isinstance(key, string_types):
+            try:
+                key = Key.from_legacy_urlsafe(key)
+            except Exception:
+                raise InvalidKeyError(cls)
+
+        if not isinstance(key, Key) or cls.__entity_name__() != key.kind:
+            raise InvalidKeyError(cls)
+        ds_entity = Entity.__get_client__().get(key=key)
+        if ds_entity:
+            entity = cls(id=key.id_or_name)
+            entity.__datastore_entity__ = ds_entity
+            return entity
+
+    @classmethod
+    def get_by_id(cls, entity_id):
+        &#34;&#34;&#34;
+        Get an entity with a specified ID(Integer) or Name(String).
+
+        Args:
+            entity_id: An integer(id) or string(name) uniquely identifying the object
+
+        Returns:
+            An instance of the entity with the provided id
+
+            Returns None if the id doesn&#39;t exist in the database
+        &#34;&#34;&#34;
+        key = Key(cls.__name__, entity_id, project=cls.__get_client__().project)
+        return cls.get(key)
+
+    @classmethod
+    def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
+        &#34;&#34;&#34;
+        Filter entities based on certain conditions, an empty query will return all entities
+
+        Args:
+            limit: Maximum number of results to return, returns null by default
+            eventual:
+                Defaults to strongly consistent (False). Setting True will use eventual consistency,
+                but cannot be used inside a transaction or will raise ValueError
+            keys_only: Sets the results to include keys only
+            order_by:
+                A list of field names to order by, add `-` to order descending
+                e.g. [&#34;name&#34;, &#34;-age&#34;]
+
+        Returns:
+            A iterable query instance; call fetch() to get the results as a list.
+        &#34;&#34;&#34;
+        return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
+
+    @classmethod
+    def __entity_name__(cls):
+        return cls.__name__
+
+    @staticmethod
+    def __get_client__():
+        if not hasattr(builtins, &#34;__datastore_client__&#34;):
+            setattr(builtins, &#34;__datastore_client__&#34;, Client())
+        return getattr(builtins, &#34;__datastore_client__&#34;)</code></pre>
+</details>
+<h3>Static methods</h3>
+<dl>
+<dt id="echo.datastore.entity.Entity.get"><code class="name flex">
+<span>def <span class="ident">get</span></span>(<span>key)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get an entity with the specified key</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>key</code></strong></dt>
+<dd>A urlsafe key string or an instance of a Key</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>An</code> <code>instance</code> of <code>the</code> <code>entity</code> <code>with</code> <code>the</code> <code>provided</code> <code>id</code></dt>
+<dd>&nbsp;</dd>
+<dt><code>Returns</code> <code>None</code> <code>if</code> <code>the</code> <code>id</code> <code>doesn't</code> <code>exist</code> <code>in</code> <code>the</code> <code>database</code></dt>
+<dd>&nbsp;</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><strong><code>InvalidKeyError</code></strong></dt>
+<dd>Raised if the key provided is invalid for this entity</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get(cls, key):
+    &#34;&#34;&#34;
+    Get an entity with the specified key
+
+    Args:
+        key: A urlsafe key string or an instance of a Key
+
+    Returns:
+        An instance of the entity with the provided id
+
+        Returns None if the id doesn&#39;t exist in the database
+
+    Raises:
+        InvalidKeyError: Raised if the key provided is invalid for this entity
+    &#34;&#34;&#34;
+    if isinstance(key, string_types):
+        try:
+            key = Key.from_legacy_urlsafe(key)
+        except Exception:
+            raise InvalidKeyError(cls)
+
+    if not isinstance(key, Key) or cls.__entity_name__() != key.kind:
+        raise InvalidKeyError(cls)
+    ds_entity = Entity.__get_client__().get(key=key)
+    if ds_entity:
+        entity = cls(id=key.id_or_name)
+        entity.__datastore_entity__ = ds_entity
+        return entity</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Entity.get_by_id"><code class="name flex">
+<span>def <span class="ident">get_by_id</span></span>(<span>entity_id)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get an entity with a specified ID(Integer) or Name(String).</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>entity_id</code></strong></dt>
+<dd>An integer(id) or string(name) uniquely identifying the object</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>An</code> <code>instance</code> of <code>the</code> <code>entity</code> <code>with</code> <code>the</code> <code>provided</code> <code>id</code></dt>
+<dd>&nbsp;</dd>
+<dt><code>Returns</code> <code>None</code> <code>if</code> <code>the</code> <code>id</code> <code>doesn't</code> <code>exist</code> <code>in</code> <code>the</code> <code>database</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def get_by_id(cls, entity_id):
+    &#34;&#34;&#34;
+    Get an entity with a specified ID(Integer) or Name(String).
+
+    Args:
+        entity_id: An integer(id) or string(name) uniquely identifying the object
+
+    Returns:
+        An instance of the entity with the provided id
+
+        Returns None if the id doesn&#39;t exist in the database
+    &#34;&#34;&#34;
+    key = Key(cls.__name__, entity_id, project=cls.__get_client__().project)
+    return cls.get(key)</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Entity.query"><code class="name flex">
+<span>def <span class="ident">query</span></span>(<span>limit=None, eventual=False, keys_only=False, order_by=None)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Filter entities based on certain conditions, an empty query will return all entities</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>limit</code></strong></dt>
+<dd>Maximum number of results to return, returns null by default</dd>
+<dt>eventual:</dt>
+<dt>Defaults to strongly consistent (False). Setting True will use eventual consistency,</dt>
+<dt>but cannot be used inside a transaction or will raise ValueError</dt>
+<dt><strong><code>keys_only</code></strong></dt>
+<dd>Sets the results to include keys only</dd>
+</dl>
+<p>order_by:
+A list of field names to order by, add <code>-</code> to order descending
+e.g. ["name", "-age"]</p>
+<h2 id="returns">Returns</h2>
+<p>A iterable query instance; call fetch() to get the results as a list.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@classmethod
+def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
+    &#34;&#34;&#34;
+    Filter entities based on certain conditions, an empty query will return all entities
+
+    Args:
+        limit: Maximum number of results to return, returns null by default
+        eventual:
+            Defaults to strongly consistent (False). Setting True will use eventual consistency,
+            but cannot be used inside a transaction or will raise ValueError
+        keys_only: Sets the results to include keys only
+        order_by:
+            A list of field names to order by, add `-` to order descending
+            e.g. [&#34;name&#34;, &#34;-age&#34;]
+
+    Returns:
+        A iterable query instance; call fetch() to get the results as a list.
+    &#34;&#34;&#34;
+    return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="echo.datastore.entity.Entity.key"><code class="name flex">
+<span>def <span class="ident">key</span></span>(<span>self, partial=False)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Generates a key for this Entity</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>partial</code></strong></dt>
+<dd>Returns a partial key if an ID doesn't exist</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>An</code> <code>instance</code> of <code>a</code> <code>key</code>, <code>convert</code> <code>to</code> <code>string</code> <code>to</code> <code>get</code> <code>a</code> <code>urlsafe</code> <code>key</code></dt>
+<dd>&nbsp;</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><strong><code>NotSavedException</code></strong></dt>
+<dd>Raised if reading a key of an unsaved entity unless partial is true or the ID is</dd>
+<dt><code>explicitly</code> <code>provided</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def key(self, partial=False):
+    &#34;&#34;&#34;Generates a key for this Entity
+    Args:
+        partial: Returns a partial key if an ID doesn&#39;t exist
+
+    Returns:
+        An instance of a key, convert to string to get a urlsafe key
+
+    Raises:
+        NotSavedException: Raised if reading a key of an unsaved entity unless partial is true or the ID is
+        explicitly provided
+    &#34;&#34;&#34;
+    paths = [self.__entity_name__()]
+    if not self.__id and not partial:
+        raise NotSavedException()
+    if self.__id:
+        paths.append(self.__id)
+    project = Entity.__get_client__().project
+    return Key(*paths, project=project)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="echo.datastore.entity.Key"><code class="flex name class">
+<span>class <span class="ident">Key</span></span>
+<span>(</span><span>*path_args, **kwargs)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>An immutable representation of a datastore Key.</p>
+<div class="admonition testsetup">
+<p class="admonition-title">Testsetup:&ensp;key-ctor</p>
+<p>from google.cloud import datastore</p>
+<p>project = 'my-special-pony'
+client = datastore.Client(project=project)
+Key = datastore.Key</p>
+<p>parent_key = client.key('Parent', 'foo')</p>
+</div>
+<p>To create a basic key directly:</p>
+<div class="admonition doctest">
+<p class="admonition-title">Doctest:&ensp;key-ctor</p>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Key('EntityKind', 1234, project=project)
+<Key('EntityKind', 1234), project=...>
+Key('EntityKind', 'foo', project=project)
+<Key('EntityKind', 'foo'), project=...></p>
+</blockquote>
+</blockquote>
+</blockquote>
+</div>
+<p>Though typical usage comes via the
+:meth:<code>~google.cloud.datastore.client.Client.key</code> factory:</p>
+<div class="admonition doctest">
+<p class="admonition-title">Doctest:&ensp;key-ctor</p>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>client.key('EntityKind', 1234)
+<Key('EntityKind', 1234), project=...>
+client.key('EntityKind', 'foo')
+<Key('EntityKind', 'foo'), project=...></p>
+</blockquote>
+</blockquote>
+</blockquote>
+</div>
+<p>To create a key with a parent:</p>
+<div class="admonition doctest">
+<p class="admonition-title">Doctest:&ensp;key-ctor</p>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>client.key('Parent', 'foo', 'Child', 1234)
+<Key('Parent', 'foo', 'Child', 1234), project=...>
+client.key('Child', 1234, parent=parent_key)
+<Key('Parent', 'foo', 'Child', 1234), project=...></p>
+</blockquote>
+</blockquote>
+</blockquote>
+</div>
+<p>To create a partial key:</p>
+<div class="admonition doctest">
+<p class="admonition-title">Doctest:&ensp;key-ctor</p>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>client.key('Parent', 'foo', 'Child')
+<Key('Parent', 'foo', 'Child'), project=...></p>
+</blockquote>
+</blockquote>
+</blockquote>
+</div>
+<p>:type path_args: tuple of string and integer
+:param path_args: May represent a partial (odd length) or full (even
+length) key path.</p>
+<p>:param kwargs: Keyword arguments to be passed in.</p>
+<p>Accepted keyword arguments are</p>
+<ul>
+<li>namespace (string): A namespace identifier for the key.</li>
+<li>project (string): The project associated with the key.</li>
+<li>parent (:class:<code>~google.cloud.datastore.key.Key</code>): The parent of the key.</li>
+</ul>
+<p>The project argument is required unless it has been set implicitly.</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Key(DatastoreKey):
+    def __repr__(self):
+        return self.to_legacy_urlsafe().decode(&#39;utf-8&#39;)
+
+    def __str__(self):
+        return self.__repr__()</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>google.cloud.datastore.key.Key</li>
+</ul>
+</dd>
+<dt id="echo.datastore.entity.Query"><code class="flex name class">
+<span>class <span class="ident">Query</span></span>
+<span>(</span><span>entity, keys_only=False, eventual=False, limit=None, order_by=None)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Query(object):
+    def __init__(self, entity, keys_only=False, eventual=False, limit=None, order_by=None):
+        order = []
+        if isinstance(order_by, (list, tuple)):
+            order = order_by
+        elif isinstance(order_by, str):
+            order = [str]
+        self.__datastore_query = Entity.__get_client__().query(kind=entity.__entity_name__(), order=order)
+        self.entity = entity
+        self.keys_only = keys_only
+        if keys_only:
+            self.__datastore_query.keys_only()
+        self.limit = limit
+        self.eventual = eventual
+        self.__iterator = None
+
+    def equal(self, field, value):
+        &#34;&#34;&#34;
+        Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;=&#39;, value)
+        return self
+
+    def gt(self, field, value):
+        &#34;&#34;&#34;
+        Greater Than filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;&gt;&#39;, value)
+        return self
+
+    def gte(self, field, value):
+        &#34;&#34;&#34;
+        Greater Than or Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;&gt;=&#39;, value)
+        return self
+
+    def lt(self, field, value):
+        &#34;&#34;&#34;
+        Less Than filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;&lt;&#39;, value)
+        return self
+
+    def lte(self, field, value):
+        &#34;&#34;&#34;
+        Less Than or Equal to filter
+        Args:
+            field: Field name
+            value: Value to compare
+
+        Returns:
+            Current Query Instance
+        &#34;&#34;&#34;
+        self.__datastore_query.add_filter(field, &#39;&lt;=&#39;, value)
+        return self
+
+    def fetch(self):
+        &#34;&#34;&#34;
+        Get Query results as a list
+        &#34;&#34;&#34;
+        return [entity for entity in self]
+
+    def __process_result_item(self, result_item):
+        if self.keys_only:
+            # The result is a datastore entity with only a key
+            return Key(result_item.kind, result_item.id, project=Entity.__get_client__().project)
+        entity = self.entity(id=result_item.id)
+        entity.__datastore_entity__ = result_item
+        return entity
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self.__iterator:
+            self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
+        return self.__process_result_item(self.__iterator.__next__())
+
+    def next(self):
+        # Support python2 iterators
+        if not self.__iterator:
+            self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
+        return self.__process_result_item(self.__iterator.next())</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="echo.datastore.entity.Query.equal"><code class="name flex">
+<span>def <span class="ident">equal</span></span>(<span>self, field, value)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Equal to filter</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>field</code></strong></dt>
+<dd>Field name</dd>
+<dt><strong><code>value</code></strong></dt>
+<dd>Value to compare</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Current</code> <a title="echo.datastore.entity.Query" href="#echo.datastore.entity.Query"><code>Query</code></a> <code>Instance</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def equal(self, field, value):
+    &#34;&#34;&#34;
+    Equal to filter
+    Args:
+        field: Field name
+        value: Value to compare
+
+    Returns:
+        Current Query Instance
+    &#34;&#34;&#34;
+    self.__datastore_query.add_filter(field, &#39;=&#39;, value)
+    return self</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Query.fetch"><code class="name flex">
+<span>def <span class="ident">fetch</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Get Query results as a list</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fetch(self):
+    &#34;&#34;&#34;
+    Get Query results as a list
+    &#34;&#34;&#34;
+    return [entity for entity in self]</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Query.gt"><code class="name flex">
+<span>def <span class="ident">gt</span></span>(<span>self, field, value)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Greater Than filter</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>field</code></strong></dt>
+<dd>Field name</dd>
+<dt><strong><code>value</code></strong></dt>
+<dd>Value to compare</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Current</code> <a title="echo.datastore.entity.Query" href="#echo.datastore.entity.Query"><code>Query</code></a> <code>Instance</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def gt(self, field, value):
+    &#34;&#34;&#34;
+    Greater Than filter
+    Args:
+        field: Field name
+        value: Value to compare
+
+    Returns:
+        Current Query Instance
+    &#34;&#34;&#34;
+    self.__datastore_query.add_filter(field, &#39;&gt;&#39;, value)
+    return self</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Query.gte"><code class="name flex">
+<span>def <span class="ident">gte</span></span>(<span>self, field, value)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Greater Than or Equal to filter</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>field</code></strong></dt>
+<dd>Field name</dd>
+<dt><strong><code>value</code></strong></dt>
+<dd>Value to compare</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Current</code> <a title="echo.datastore.entity.Query" href="#echo.datastore.entity.Query"><code>Query</code></a> <code>Instance</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def gte(self, field, value):
+    &#34;&#34;&#34;
+    Greater Than or Equal to filter
+    Args:
+        field: Field name
+        value: Value to compare
+
+    Returns:
+        Current Query Instance
+    &#34;&#34;&#34;
+    self.__datastore_query.add_filter(field, &#39;&gt;=&#39;, value)
+    return self</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Query.lt"><code class="name flex">
+<span>def <span class="ident">lt</span></span>(<span>self, field, value)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Less Than filter</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>field</code></strong></dt>
+<dd>Field name</dd>
+<dt><strong><code>value</code></strong></dt>
+<dd>Value to compare</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Current</code> <a title="echo.datastore.entity.Query" href="#echo.datastore.entity.Query"><code>Query</code></a> <code>Instance</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lt(self, field, value):
+    &#34;&#34;&#34;
+    Less Than filter
+    Args:
+        field: Field name
+        value: Value to compare
+
+    Returns:
+        Current Query Instance
+    &#34;&#34;&#34;
+    self.__datastore_query.add_filter(field, &#39;&lt;&#39;, value)
+    return self</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Query.lte"><code class="name flex">
+<span>def <span class="ident">lte</span></span>(<span>self, field, value)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Less Than or Equal to filter</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>field</code></strong></dt>
+<dd>Field name</dd>
+<dt><strong><code>value</code></strong></dt>
+<dd>Value to compare</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Current</code> <a title="echo.datastore.entity.Query" href="#echo.datastore.entity.Query"><code>Query</code></a> <code>Instance</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lte(self, field, value):
+    &#34;&#34;&#34;
+    Less Than or Equal to filter
+    Args:
+        field: Field name
+        value: Value to compare
+
+    Returns:
+        Current Query Instance
+    &#34;&#34;&#34;
+    self.__datastore_query.add_filter(field, &#39;&lt;=&#39;, value)
+    return self</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Query.next"><code class="name flex">
+<span>def <span class="ident">next</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def next(self):
+    # Support python2 iterators
+    if not self.__iterator:
+        self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
+    return self.__process_result_item(self.__iterator.next())</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="echo.datastore" href="index.html">echo.datastore</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="echo.datastore.entity.BaseEntityMeta" href="#echo.datastore.entity.BaseEntityMeta">BaseEntityMeta</a></code></h4>
+</li>
+<li>
+<h4><code><a title="echo.datastore.entity.Entity" href="#echo.datastore.entity.Entity">Entity</a></code></h4>
+<ul class="">
+<li><code><a title="echo.datastore.entity.Entity.get" href="#echo.datastore.entity.Entity.get">get</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.get_by_id" href="#echo.datastore.entity.Entity.get_by_id">get_by_id</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.key" href="#echo.datastore.entity.Entity.key">key</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.query" href="#echo.datastore.entity.Entity.query">query</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="echo.datastore.entity.Key" href="#echo.datastore.entity.Key">Key</a></code></h4>
+</li>
+<li>
+<h4><code><a title="echo.datastore.entity.Query" href="#echo.datastore.entity.Query">Query</a></code></h4>
+<ul class="two-column">
+<li><code><a title="echo.datastore.entity.Query.equal" href="#echo.datastore.entity.Query.equal">equal</a></code></li>
+<li><code><a title="echo.datastore.entity.Query.fetch" href="#echo.datastore.entity.Query.fetch">fetch</a></code></li>
+<li><code><a title="echo.datastore.entity.Query.gt" href="#echo.datastore.entity.Query.gt">gt</a></code></li>
+<li><code><a title="echo.datastore.entity.Query.gte" href="#echo.datastore.entity.Query.gte">gte</a></code></li>
+<li><code><a title="echo.datastore.entity.Query.lt" href="#echo.datastore.entity.Query.lt">lt</a></code></li>
+<li><code><a title="echo.datastore.entity.Query.lte" href="#echo.datastore.entity.Query.lte">lte</a></code></li>
+<li><code><a title="echo.datastore.entity.Query.next" href="#echo.datastore.entity.Query.next">next</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.7.5</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>
