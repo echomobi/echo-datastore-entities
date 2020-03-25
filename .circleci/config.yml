@@ -1,29 +1,9 @@
-version: 2
+version: 2.1
 
-jobs:
-  test:
-    environment:
-      GOOGLE_APPLICATION_CREDENTIALS: "service_account.json"
-    docker:
-      - image: echomobi/echomobile-ci:v1.2
-    working_directory: ~/datastore-entities
+commands:
+  restore_or_rebuild_python_cache:
+    description: "Restores python virtual environments from cache or rebuilds them and caches"
     steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "5d:f6:16:8c:c3:44:97:e2:09:6e:7e:f7:65:35:f9:80"
-
-      - run:
-          name: Start Datastore Emulator
-          command: gcloud beta emulators datastore start --project=test --consistency=1.0 --host-port=0.0.0.0:8090 --no-store-on-disk
-          background: true
-
-      - checkout
-
-      # adds a dummy service key to allow creation of a client for testing
-      - run:
-          name: Add Service Account
-          command: echo $FAKE_SERVICE_ACCOUNT>service_account.json
-
       # Update cache version when requirements have not changed but different files are needed for the cache
       - restore_cache:
           name: Restore python cache
@@ -54,49 +34,40 @@ jobs:
             - ./venv
             - ./venv2
 
-      - run:
-          command: >
-            tar
-            --sort=name --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01'
-            -cf documented_code_cache.tar
-            ./echo ./build_docs
-          name: Preparing documentation cache
-
-      - restore_cache:
-          name: Restore Docs Build
-          keys:
-            - docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
+  add_push_access:
+    description: "Adds a deploy key with push access"
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "5d:f6:16:8c:c3:44:97:e2:09:6e:7e:f7:65:35:f9:80"
 
       - run:
-          name: ++ Build Docs
+          name: Register git user details
           command: |
-            if [ -e CACHE_PLACEHOLDER ]; then
-              echo "Docs are up to date"
-            else
-              . venv/bin/activate && \
-              ./build_docs && \
-              touch CACHE_PLACEHOLDER PUSH_PLACEHOLDER && \
-              deactivate
-            fi
+            git config --global user.name "echomobi-bot"
+            git config --global user.email "engineering@echomobile.org"
 
-      - save_cache:
-          name: Save docs cache
-          key: docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
-          paths:
-            - ./CACHE_PLACEHOLDER
-
+jobs:
+  test:
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: "service_account.json"
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+    steps:
       - run:
-          name: ++ Push new docs (Triggers new build)
-          command: |
-            if [ -e PUSH_PLACEHOLDER ]; then
-              git config --global user.name "Echo Mobile"
-              git config --global user.email "engineering@echomobile.io"
-              git add docs/
-              git commit -m "Docs Build $CIRCLE_BRANCH"
-              git push origin $CIRCLE_BRANCH
-            else
-              echo "Docs are upto date"
-            fi
+          name: Start Datastore Emulator
+          command: gcloud beta emulators datastore start --project=test --consistency=1.0 --host-port=0.0.0.0:8090 --no-store-on-disk
+          background: true
+
+      - checkout
+
+      # adds a dummy service key to allow creation of a client for testing
+      - run:
+          name: Add Service Account
+          command: echo $FAKE_SERVICE_ACCOUNT>service_account.json
+
+      - restore_or_rebuild_python_cache
 
       - run:
           command: |
@@ -116,11 +87,64 @@ jobs:
           command: . venv/bin/activate && codecov
           name: ++ Report Coverage
 
+  build_docs:
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+      steps:
+        - add_push_access
+        - checkout
+        - restore_or_rebuild_python_cache
+
+        - run:
+            command: >
+              tar
+              --sort=name --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01'
+              -cf documented_code_cache.tar
+              ./echo ./build_docs
+            name: Preparing documentation cache
+
+        - restore_cache:
+            name: Restore Docs Build
+            keys:
+              - docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
+
+        - run:
+            name: ++ Build Docs
+            command: |
+              if [ -e CACHE_PLACEHOLDER ]; then
+                echo "Docs are up to date"
+              else
+                . venv/bin/activate && \
+                ./build_docs && \
+                touch CACHE_PLACEHOLDER PUSH_PLACEHOLDER && \
+                deactivate
+              fi
+
+        - save_cache:
+            name: Save docs cache
+            key: docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
+            paths:
+              - ./CACHE_PLACEHOLDER
+
+        - run:
+            name: ++ Push new docs (Triggers new build)
+            command: |
+              if [ -e PUSH_PLACEHOLDER ]; then
+                git add docs/
+                git commit -m "Docs Build $CIRCLE_BRANCH"
+                git push origin $CIRCLE_BRANCH
+              else
+                echo "Docs are upto date"
+              fi
+
   deploy:
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
     steps:
+      - checkout
+      - restore_or_rebuild_python_cache
       - run:
           name: Build
           command: |
@@ -135,6 +159,9 @@ workflows:
   test_and_build:
     jobs:
       - test
+      - build_docs:
+          requires:
+            - test
       - deploy:
           requires:
             - test

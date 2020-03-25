@@ -4,3 +4,4 @@ venv2
 *.pyc
 .coverage
 service_account.json
+docs
