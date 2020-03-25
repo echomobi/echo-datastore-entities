@@ -91,52 +91,52 @@ jobs:
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
-      steps:
-        - add_push_access
-        - checkout
-        - restore_or_rebuild_python_cache
+    steps:
+      - add_push_access
+      - checkout
+      - restore_or_rebuild_python_cache
 
-        - run:
-            command: >
-              tar
-              --sort=name --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01'
-              -cf documented_code_cache.tar
-              ./echo ./build_docs
-            name: Preparing documentation cache
+      - run:
+          command: >
+            tar
+            --sort=name --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01'
+            -cf documented_code_cache.tar
+            ./echo ./build_docs
+          name: Preparing documentation cache
 
-        - restore_cache:
-            name: Restore Docs Build
-            keys:
-              - docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
+      - restore_cache:
+          name: Restore Docs Build
+          keys:
+            - docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
 
-        - run:
-            name: ++ Build Docs
-            command: |
-              if [ -e CACHE_PLACEHOLDER ]; then
-                echo "Docs are up to date"
-              else
-                . venv/bin/activate && \
-                ./build_docs && \
-                touch CACHE_PLACEHOLDER PUSH_PLACEHOLDER && \
-                deactivate
-              fi
+      - run:
+          name: ++ Build Docs
+          command: |
+            if [ -e CACHE_PLACEHOLDER ]; then
+              echo "Docs are up to date"
+            else
+              . venv/bin/activate && \
+              ./build_docs && \
+              touch CACHE_PLACEHOLDER PUSH_PLACEHOLDER && \
+              deactivate
+            fi
 
-        - save_cache:
-            name: Save docs cache
-            key: docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
-            paths:
-              - ./CACHE_PLACEHOLDER
+      - save_cache:
+          name: Save docs cache
+          key: docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
+          paths:
+            - ./CACHE_PLACEHOLDER
 
-        - run:
-            name: ++ Push new docs (Triggers new build)
-            command: |
-              if [ -e PUSH_PLACEHOLDER ]; then
-                git add docs/
-                git commit -m "Docs Build $CIRCLE_BRANCH"
-                git push origin $CIRCLE_BRANCH
-              else
-                echo "Docs are upto date"
-              fi
+      - run:
+          name: ++ Push new docs (Triggers new build)
+          command: |
+            if [ -e PUSH_PLACEHOLDER ]; then
+              git add docs/
+              git commit -m "Docs Build $CIRCLE_BRANCH"
+              git push origin $CIRCLE_BRANCH
+            else
+              echo "Docs are upto date"
+            fi
 
   deploy:
     docker:
