@@ -1,0 +1,5 @@
+[ -e docs ] && rm -r docs
+pdoc --html echo
+mv html/echo docs
+pdoc --pdf echo>docs/README.md
+rm -r html
