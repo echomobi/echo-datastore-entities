@@ -73,8 +73,10 @@ jobs:
             if [ -e CACHE_PLACEHOLDER ]; then
               echo "Docs are up to date"
             else
-              ./build_docs
-              touch CACHE_PLACEHOLDER PUSH_PLACEHOLDER
+              . venv/bin/activate && \
+              ./build_docs && \
+              touch CACHE_PLACEHOLDER PUSH_PLACEHOLDER && \
+              deactivate
             fi
 
       - save_cache:
