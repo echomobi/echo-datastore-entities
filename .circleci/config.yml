@@ -65,10 +65,10 @@ jobs:
       - restore_cache:
           name: Restore Docs Build
           keys:
-            - docs-cache-v1-{{ checksum "documented_code_cache.tar" }}
+            - docs-cache-v2-{{ checksum "documented_code_cache.tar" }}
 
       - run:
-          name: ++ Build Docs (Triggers new build)
+          name: ++ Build Docs
           command: |
             if [ -e CACHE_PLACEHOLDER ]; then
               echo "Docs are up to date"
@@ -81,16 +81,19 @@ jobs:
 
       - save_cache:
           name: Save docs cache
-          key: docs-cache-v1-{{ checksum "documented_code_cache.tar" }}
+          key: docs-cache-v2-{{ checksum "documented_code_cache.tar" }}
           paths:
             - ./CACHE_PLACEHOLDER
 
       - run:
-          name: Push new docs
+          name: ++ Push new docs (Triggers new build)
           command: |
             if [ -e PUSH_PLACEHOLDER ]; then
-              git add docs
+              git status
+              git add docs/
+              git status
               git push origin $CIRCLE_BRANCH
+              git status
             else
               echo "Docs are upto date"
             fi
