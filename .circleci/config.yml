@@ -65,7 +65,7 @@ jobs:
       - restore_cache:
           name: Restore Docs Build
           keys:
-            - docs-cache-v2-{{ checksum "documented_code_cache.tar" }}
+            - docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
 
       - run:
           name: ++ Build Docs
@@ -81,7 +81,7 @@ jobs:
 
       - save_cache:
           name: Save docs cache
-          key: docs-cache-v2-{{ checksum "documented_code_cache.tar" }}
+          key: docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
           paths:
             - ./CACHE_PLACEHOLDER
 
