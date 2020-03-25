@@ -88,6 +88,8 @@ jobs:
           name: ++ Report Coverage
 
   build_docs:
+    environment:
+      PYTHONWARNINGS: "error::UserWarning"
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
@@ -116,8 +118,9 @@ jobs:
               echo "Docs are up to date"
             else
               . venv/bin/activate && \
-              ./build_docs && \
-              touch CACHE_PLACEHOLDER PUSH_PLACEHOLDER && \
+              pdoc --html --output-dir docs-build echo.datastore && \
+              pdoc --pdf echo.datastore>docs-build/echo/datastore/README.md && \
+              touch CACHE_PLACEHOLDER && \
               deactivate
             fi
 
@@ -130,7 +133,9 @@ jobs:
       - run:
           name: ++ Push new docs (Triggers new build)
           command: |
-            if [ -e PUSH_PLACEHOLDER ]; then
+            if [ -e docs-build ]; then
+              [ -e docs ] && git rm -r docs && rm -r docs
+              mv docs-build/echo/datastore/ docs
               git add docs/
               git commit -m "Docs Build $CIRCLE_BRANCH"
               git push origin $CIRCLE_BRANCH
