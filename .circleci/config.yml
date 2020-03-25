@@ -1,13 +1,16 @@
 version: 2
 
 jobs:
-  build:
+  test:
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: "service_account.json"
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
     steps:
+      - add_ssh_keys:
+          - fingerprints:
+              - "5d:f6:16:8c:c3:44:97:e2:09:6e:7e:f7:65:35:f9:80"
       - run:
           name: Start Datastore Emulator
           command: gcloud beta emulators datastore start --project=test --consistency=1.0 --host-port=0.0.0.0:8090 --no-store-on-disk
@@ -51,6 +54,45 @@ jobs:
             - ./venv2
 
       - run:
+          command: >
+            tar
+            --sort=name --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01'
+            -cf documented_code_cache.tar
+            ./echo ./build_docs
+          name: Preparing documentation cache
+
+      - restore_cache:
+          name: Restore Docs Build
+          keys:
+            - docs-cache-v1-{{ checksum "documented_code_cache.tar" }}
+
+      - run:
+          name: ++ Build Docs (Triggers new build)
+          command: |
+            if [ -e CACHE_PLACEHOLDER ]; then
+              echo "Docs are up to date"
+            else
+              ./build_docs
+              touch CACHE_PLACEHOLDER PUSH_PLACEHOLDER
+            fi
+
+      - save_cache:
+          name: Save docs cache
+          key: docs-cache-v1-{{ checksum "documented_code_cache.tar" }}
+          paths:
+            - ./CACHE_PLACEHOLDER
+
+      - run:
+          name: Push new docs
+          command: |
+            if [ -e PUSH_PLACEHOLDER ]; then
+              git add docs
+              git push origin $CIRCLE_BRANCH
+            else
+              echo "Docs are upto date"
+            fi
+
+      - run:
           command: |
             $(gcloud beta emulators datastore env-init)
             . venv/bin/activate
@@ -67,3 +109,23 @@ jobs:
       - run:
           command: . venv/bin/activate && codecov
           name: ++ Report Coverage
+
+  deploy:
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+    branches:
+      only:
+        - master
+    steps:
+      - run:
+          name: Build
+          command: echo "Build pip package here"
+
+workflows:
+  version: 2
+  test-and-build:
+    - test
+    - deploy:
+        requires:
+          - test
