@@ -169,7 +169,6 @@ jobs:
           name: ++ Release Package (master only)
           command: |
             . venv/bin/activate
-            git pull --tags
             if [[ $(git tag) == *v$(cat RELEASE)* ]]; then
               echo "Version $(cat RELEASE) already released"
             else
