@@ -46,6 +46,7 @@ commands:
           command: |
             git config --global user.name "echomobi-bot"
             git config --global user.email "engineering@echomobile.org"
+            git branch --set-upstream-to=origin/$CIRCLE_BRANCH $CIRCLE_BRANCH
 
 jobs:
   test:
