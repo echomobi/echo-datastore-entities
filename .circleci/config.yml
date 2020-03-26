@@ -165,9 +165,9 @@ workflows:
   test_and_build:
     jobs:
       - test
-      - build_docs
-#          requires:
-#            - test
+      - build_docs:
+          requires:
+            - test
       - deploy:
           requires:
             - test
