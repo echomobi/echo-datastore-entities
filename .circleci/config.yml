@@ -136,11 +136,14 @@ jobs:
           command: |
             if [ -e docs-build ]; then
               git status
+              ls
               [ -e docs ] && git rm -r docs
               mkdir -p docs
               git status
+              ls
               mv docs-build/echo/datastore/* docs/
               git status
+              ls
               git add docs/
               git status
               git commit -m "Docs Build $CIRCLE_BRANCH"
