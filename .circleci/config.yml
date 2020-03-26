@@ -109,7 +109,7 @@ jobs:
       - restore_cache:
           name: Restore Docs Build
           keys:
-            - docs-cache-v2-{{ checksum "documented_code_cache.tar" }}
+            - docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
 
       - run:
           name: ++ Build Docs
@@ -126,7 +126,7 @@ jobs:
 
       - save_cache:
           name: Save docs cache
-          key: docs-cache-v2-{{ checksum "documented_code_cache.tar" }}
+          key: docs-cache-v3-{{ checksum "documented_code_cache.tar" }}
           paths:
             - ./CACHE_PLACEHOLDER
 
@@ -135,8 +135,8 @@ jobs:
           command: |
             if [ -e docs-build ]; then
               [ -e docs ] && git rm -r docs
-              [ -e docs ] && rm -r docs
-              mv docs-build/echo/datastore/ docs
+              mkdir -p docs
+              mv docs-build/echo/datastore/* docs/
               git add docs/
               git commit -m "Docs Build $CIRCLE_BRANCH"
               git push origin $CIRCLE_BRANCH
@@ -157,7 +157,7 @@ jobs:
             if [ $CIRCLE_BRANCH=="master" ]; then
               echo "Build pip package here"
             else
-              echo "Ignoring build on $CIRCLE_BRANCH"
+              echo "Ignoring release cycle on $CIRCLE_BRANCH"
             fi
 
 workflows:
