@@ -51,7 +51,7 @@ commands:
             git branch --set-upstream-to=origin/$CIRCLE_BRANCH $CIRCLE_BRANCH
 
 jobs:
-  test:
+  run_tests:
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: "service_account.json"
     docker:
@@ -146,7 +146,7 @@ jobs:
               echo "Docs are upto date"
             fi
 
-  release:
+  build_package:
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
@@ -189,10 +189,10 @@ workflows:
   version: 2
   test_and_build:
     jobs:
-      - test
+      - run_tests
       - build_docs:
           requires:
-            - test
-      - release:
+            - run_tests
+      - build_package:
           requires:
-            - test
+            - run_tests
