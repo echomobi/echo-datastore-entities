@@ -109,7 +109,7 @@ jobs:
       - restore_cache:
           name: Restore Docs Build
           keys:
-            - docs-cache-v5-{{ checksum "documented_code_cache.tar" }}
+            - docs-cache-v6-{{ checksum "documented_code_cache.tar" }}
 
       - run:
           name: ++ Build Docs
@@ -122,12 +122,11 @@ jobs:
               pdoc --pdf echo.datastore>docs-build/echo/datastore/README.md && \
               touch CACHE_PLACEHOLDER && \
               deactivate
-              git status
             fi
 
       - save_cache:
           name: Save docs cache
-          key: docs-cache-v5-{{ checksum "documented_code_cache.tar" }}
+          key: docs-cache-v6-{{ checksum "documented_code_cache.tar" }}
           paths:
             - ./CACHE_PLACEHOLDER
 
@@ -135,17 +134,10 @@ jobs:
           name: ++ Push new docs (Triggers new build)
           command: |
             if [ -e docs-build ]; then
-              git status
-              ls
               [ -e docs ] && git rm -r docs
               mkdir -p docs
-              git status
-              ls
               mv docs-build/echo/datastore/* docs/
-              git status
-              ls
               git add docs/
-              git status
               git commit -m "Docs Build $CIRCLE_BRANCH"
               git push origin $CIRCLE_BRANCH
             else
