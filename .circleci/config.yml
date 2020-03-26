@@ -170,7 +170,7 @@ workflows:
   test_and_build:
     jobs:
       - test
-      - build_docs:
+      - build_docs
 #          requires:
 #            - test
       - deploy:
