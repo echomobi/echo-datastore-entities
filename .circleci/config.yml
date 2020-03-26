@@ -144,21 +144,46 @@ jobs:
               echo "Docs are upto date"
             fi
 
-  deploy:
+  release:
     docker:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
     steps:
+      - add_push_access
       - checkout
       - restore_or_rebuild_python_cache
+      - restore_cache:
+          name: Restore Release Build Cache
+          keys:
+            - setup-cache-v0-{{ checksum "RELEASE" }}
+
       - run:
-          name: Build
+          name: ++ Build Package
           command: |
-            if [ $CIRCLE_BRANCH=="master" ]; then
-              echo "Build pip package here"
+            . venv/bin/activate && \
+            python setup.py sdist bdist_wheel && \
+            deactivate
+
+      - run:
+          name: ++ Release Package (master only)
+          command: |
+            . venv/bin/activate
+            git pull --tags
+            if [[ $(git tag) == *v$(cat RELEASE)* ]]; then
+              echo "Version $(cat RELEASE) already released"
             else
-              echo "Ignoring release cycle on $CIRCLE_BRANCH"
+              if [ $CIRCLE_BRANCH=="master" ]; then
+                git tag v$(cat RELEASE)
+                echo -e "[pypi]" >> ~/.pypirc
+                echo -e "username = __token__" >> ~/.pypirc
+                echo -e "password = $PYPI_RELEASE_TOKEN" >> ~/.pypirc
+                twine upload --verbose dist/*
+                git push --tags
+              else
+                echo "Version $(cat RELEASE) will be deployed when $CIRCLE_BRANCH is merged to master"
+              fi
             fi
+            deactivate
 
 workflows:
   version: 2
@@ -168,6 +193,6 @@ workflows:
       - build_docs:
           requires:
             - test
-      - deploy:
+      - release:
           requires:
             - test

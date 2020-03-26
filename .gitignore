@@ -4,3 +4,6 @@ venv2
 *.pyc
 .coverage
 service_account.json
+dist
+build
+echo_datastore_entities.egg-info
