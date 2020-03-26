@@ -172,7 +172,7 @@ jobs:
             if [[ $(git tag) == *v$(cat RELEASE)* ]]; then
               echo "Version $(cat RELEASE) already released"
             else
-              if [[ $CIRCLE_BRANCH=="master" ]]; then
+              if [ $CIRCLE_BRANCH == "master" ]; then
                 git tag v$(cat RELEASE)
                 echo -e "[pypi]" >> ~/.pypirc
                 echo -e "username = __token__" >> ~/.pypirc
