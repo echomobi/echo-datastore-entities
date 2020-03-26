@@ -34,12 +34,14 @@ commands:
             - ./venv
             - ./venv2
 
-  add_push_access:
+  checkout_with_push_access:
     description: "Adds a deploy key with push access"
     steps:
       - add_ssh_keys:
           fingerprints:
             - "5d:f6:16:8c:c3:44:97:e2:09:6e:7e:f7:65:35:f9:80"
+
+      - checkout
 
       - run:
           name: Register git user details
@@ -95,8 +97,7 @@ jobs:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
     steps:
-      - add_push_access
-      - checkout
+      - checkout_with_push_access
       - restore_or_rebuild_python_cache
 
       - run:
@@ -150,8 +151,7 @@ jobs:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
     steps:
-      - add_push_access
-      - checkout
+      - checkout_with_push_access
       - restore_or_rebuild_python_cache
       - restore_cache:
           name: Restore Release Build Cache
