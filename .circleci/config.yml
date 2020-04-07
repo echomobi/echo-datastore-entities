@@ -19,6 +19,7 @@ commands:
               echo "Creating venv and installing requirements for python 3"
               python3.7 -m venv venv
               . venv/bin/activate
+              pip install wheel
               pip install -r requirements.txt
               pip install -r requirements.dev.txt
               deactivate
@@ -33,6 +34,7 @@ commands:
               echo "Creating venv and installing requirements for python 2"
               python2.7 -m virtualenv venv2
               . venv2/bin/activate
+              pip install wheel
               pip install -r requirements.txt
               pip install -r requirements.python2.dev.txt
               deactivate
