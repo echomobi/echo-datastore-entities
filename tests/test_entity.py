@@ -14,6 +14,7 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertIsInstance(Entity.__get_client__(), Client)
 
     def test_entity_creation(self):
+        # You should not be creating an entity directly without extending it
         self.assertRaises(Exception, Entity, id=30)
 
     def test_value_setting(self):
