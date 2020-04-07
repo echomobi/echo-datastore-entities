@@ -151,13 +151,8 @@ jobs:
       - image: echomobi/echomobile-ci:v1.2
     working_directory: ~/datastore-entities
     steps:
-      - checkout_with_push_access
+      - checkout
       - restore_or_rebuild_python_cache
-      - restore_cache:
-          name: Restore Release Build Cache
-          keys:
-            - setup-cache-v0-{{ checksum "RELEASE" }}
-
       - run:
           name: ++ Build Package
           command: |
@@ -165,6 +160,13 @@ jobs:
             python setup.py sdist bdist_wheel && \
             deactivate
 
+  release:
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+    steps:
+      - checkout_with_push_access
+      - restore_or_rebuild_python_cache
       - run:
           name: ++ Release Package (master only)
           command: |
@@ -172,16 +174,13 @@ jobs:
             if [[ $(git tag) == *v$(cat RELEASE)* ]]; then
               echo "Version $(cat RELEASE) already released"
             else
-              if [ $CIRCLE_BRANCH == "master" ]; then
-                git tag v$(cat RELEASE)
-                echo -e "[pypi]" >> ~/.pypirc
-                echo -e "username = __token__" >> ~/.pypirc
-                echo -e "password = $PYPI_RELEASE_TOKEN" >> ~/.pypirc
-                twine upload --verbose dist/*
-                git push --tags
-              else
-                echo "Version $(cat RELEASE) will be deployed when $CIRCLE_BRANCH is merged to master"
-              fi
+              python setup.py sdist bdist_wheel
+              git tag v$(cat RELEASE)
+              echo -e "[pypi]" >> ~/.pypirc
+              echo -e "username = __token__" >> ~/.pypirc
+              echo -e "password = $PYPI_RELEASE_TOKEN" >> ~/.pypirc
+              twine upload --verbose dist/*
+              git push --tags
             fi
             deactivate
 
@@ -196,3 +195,10 @@ workflows:
       - build_package:
           requires:
             - run_tests
+      - release:
+          requires:
+            - build_package
+          filters:
+            branches:
+              only:
+                - master
