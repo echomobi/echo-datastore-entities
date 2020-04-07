@@ -10,12 +10,18 @@ class TestEntity(Entity):
 
 
 class TestEntityTestCase(unittest.TestCase):
+    def assertRaisesWithMessage(self, expected_exception, message, function,  *args, **kwargs):
+        try:
+            function(*args, **kwargs)
+            self.fail()
+        except expected_exception as ex:
+            self.assertEqual(str(ex), message)
+
     def test_client(self):
         self.assertIsInstance(Entity.__get_client__(), Client)
 
     def test_entity_creation(self):
-        # You should not be creating an entity directly without extending it
-        self.assertRaises(Exception, Entity, id=30)
+        self.assertRaisesWithMessage(Exception, "You must extend Entity", Entity, id=30)
 
     def test_value_setting(self):
         entity = TestEntity()
