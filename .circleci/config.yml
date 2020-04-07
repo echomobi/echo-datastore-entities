@@ -73,22 +73,24 @@ jobs:
       - restore_or_rebuild_python_cache
 
       - run:
-          command: |
-            $(gcloud beta emulators datastore env-init)
-            . venv/bin/activate
-            coverage run tests/run.py
           name: ++ Run Tests on Python 3
-
-      - run:
           command: |
             $(gcloud beta emulators datastore env-init)
-            . venv2/bin/activate
-            python tests/run.py
-          name: ++ Run Tests on Python 2
+            . venv/bin/activate && coverage run tests/run.py && deactivate
 
       - run:
-          command: . venv/bin/activate && codecov
-          name: ++ Report Coverage
+          name: ++ Report python 3 coverage
+          command: . venv/bin/activate && codecov && deactivate
+
+      - run:
+          name: ++ Run Tests on Python 2
+          command: |
+            $(gcloud beta emulators datastore env-init)
+            . venv2/bin/activate && coverage run tests/run.py && deactivate
+
+      - run:
+          name: ++ Report python 2 Coverage
+          command: . venv2/bin/activate && codecov && deactivate
 
   build_docs:
     environment:
