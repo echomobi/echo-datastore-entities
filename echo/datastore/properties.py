@@ -25,6 +25,8 @@ class Property(object):
 
     def __get__(self, instance, owner):
         value = instance.__datastore_entity__.get(self.name)
+        if self.default and value is None:
+            value = self.default
         value = self.user_value(value)
         return value
 
