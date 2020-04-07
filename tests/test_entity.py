@@ -33,14 +33,17 @@ class TestEntityTestCase(unittest.TestCase):
     def test_invalid_values(self):
         entity = TestEntity()
         # Test setting invalid values
-        self.assertRaises(InvalidValueError, setattr, entity, "prop1", 10)  # Text property setting int
-        self.assertRaises(InvalidValueError, setattr, entity, "prop2", "text")  # Int property setting Text
-        self.assertRaises(InvalidValueError, setattr, entity, "prop2", 10.3)  # Int property setting Float
+        message = "10 is not a valid value for property prop1 of type TextProperty"
+        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop1", 10)  # Text property setting int
+        message = "text is not a valid value for property prop2 of type IntegerProperty"
+        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop2", "text")  # Int property setting Text
+        message = "10.3 is not a valid value for property prop2 of type IntegerProperty"
+        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop2", 10.3)  # Int property setting Float
 
     def test_key_generation(self):
         entity = TestEntity()
         # You should not get a key for an unsaved entity
-        self.assertRaises(NotSavedException, entity.key)
+        self.assertRaisesWithMessage(NotSavedException, "You can't read a key of an unsaved entity", entity.key)
 
         entity = TestEntity(id=10)
         project = Entity.__get_client__().project
@@ -70,8 +73,8 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertEqual(str(test_entity.key()), key_string)
         # Un existing ID should just return null
         self.assertIsNone(TestEntity.get_by_id(110))
-
-        self.assertRaises(InvalidKeyError, TestEntity.get, "INVALID_KEY")
-        self.assertRaises(InvalidKeyError, TestEntity.get, 10)
-        self.assertRaises(InvalidKeyError, TestEntity.get,
-                          Key('AnotherEntity', 10, project=Entity.__get_client__().project))
+        message = "Invalid key for entity TestEntity"
+        self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get, "INVALID_KEY")
+        self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get, 10)
+        self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get,
+                                     Key('AnotherEntity', 10, project=Entity.__get_client__().project))
