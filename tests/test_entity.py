@@ -13,6 +13,9 @@ class TestEntityTestCase(unittest.TestCase):
     def test_client(self):
         self.assertIsInstance(Entity.__get_client__(), Client)
 
+    def test_entity_creation(self):
+        self.assertRaises(Exception, Entity, id=30)
+
     def test_value_setting(self):
         entity = TestEntity()
         entity.prop1 = "Text Value"
