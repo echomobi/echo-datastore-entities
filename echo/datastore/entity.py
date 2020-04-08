@@ -233,6 +233,8 @@ class Query(object):
             self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
         return self.__process_result_item(self.__iterator.__next__())
 
+    __pdoc__["Query.next"] = None
+
     def next(self):
         # Support python2 iterators
         if not self.__iterator:
