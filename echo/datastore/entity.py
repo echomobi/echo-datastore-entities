@@ -1,8 +1,9 @@
 from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey
 from six import string_types
 from future import builtins
-from echo.datastore.errors import InvalidKeyError, NotSavedException
+from echo.datastore.errors import InvalidKeyError, NotSavedException, InvalidValueError
 from echo.datastore import properties
+
 __pdoc__ = {}
 
 
@@ -29,12 +30,24 @@ class Entity(object):
     def __init__(self, **data):
         if type(self) is Entity:
             raise Exception("You must extend Entity")
-        self.__id = None
+        self.id = None
+        self.__has_changes__ = True
         if "id" in data:
-            self.__id = data.get("id")
+            self.id = data.get("id")
         self.__datastore_entity__ = DatastoreEntity(key=self.key(partial=True))
         for key, value in data.items():
             setattr(self, key, value)
+        self.__field_set = self.__get_field_set()
+
+    def __get_field_set(self):
+        props = []
+        for key, value in self.__class__.__dict__.items():
+            try:
+                if issubclass(value.__class__, properties.Property):
+                    props.append((key, value.required, value.default))
+            except TypeError:
+                pass
+        return props
 
     def key(self, partial=False):
         """Generates a key for this Entity
@@ -49,10 +62,10 @@ class Entity(object):
             explicitly provided
         """
         paths = [self.__entity_name__()]
-        if not self.__id and not partial:
+        if not self.id and not partial:
             raise NotSavedException()
-        if self.__id:
-            paths.append(self.__id)
+        if self.id:
+            paths.append(self.id)
         project = Entity.__get_client__().project
         return Key(*paths, project=project)
 
@@ -84,6 +97,7 @@ class Entity(object):
         if ds_entity:
             entity = cls(id=key.id_or_name)
             entity.__datastore_entity__ = ds_entity
+            entity.__has_changes__ = False
             return entity
 
     @classmethod
@@ -121,6 +135,38 @@ class Entity(object):
             A iterable query instance; call fetch() to get the results as a list.
         """
         return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
+
+    def is_saved(self):
+        """Checks if an entity has any changes since read via get or query or last put.
+        Always returns true for a new entity
+
+        Returns:
+            Boolean: True if no changes have been made
+        """
+        return not self.__has_changes__
+
+    def put(self):
+        self.pre_put()
+        for name, required, default in self.__field_set:
+            if required and name not in self.__datastore_entity__:
+                if default is not None:
+                    self.__datastore_entity__[name] = default
+                else:
+                    raise ValueError("Required field '%s' is not set for %s" % (name, self.__entity_name__()))
+        if self.is_saved():
+            return
+        Entity.__get_client__().put(self.__datastore_entity__)
+        self.id = self.__datastore_entity__.id
+        self.__has_changes__ = False
+        self.post_put()
+
+    def post_put(self):
+        """Override this function to run logic after saving the entity"""
+
+    def pre_put(self):
+        """Override this function to run logic just before saving the entity
+        NB: This function won't be called if no changes were made. i.e. when self.is_saved() == True
+        """
 
     @classmethod
     def __entity_name__(cls):
@@ -226,6 +272,7 @@ class Query(object):
             return Key(result_item.kind, result_item.id, project=Entity.__get_client__().project)
         entity = self.entity(id=result_item.id)
         entity.__datastore_entity__ = result_item
+        entity.__has_changes__ = False
         return entity
 
     def __iter__(self):

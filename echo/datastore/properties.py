@@ -37,6 +37,7 @@ class Property(object):
 
     def __delete__(self, instance):
         del instance.__datastore_entity__[self.name]
+        instance.__has_changes__ = True
 
     def __type_check__(self, user_value, data_types):
         """
