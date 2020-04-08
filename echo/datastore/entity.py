@@ -7,7 +7,7 @@ __pdoc__ = {}
 
 
 class BaseEntityMeta(type):
-    __pdoc__['BaseEntityMeta'] = None
+    __pdoc__['BaseEntityMeta'] = False
 
     # Needed to support setting property names on python2
     def __new__(mcls, name, bases, attrs):
@@ -236,7 +236,7 @@ class Query(object):
             self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
         return self.__process_result_item(self.__iterator.__next__())
 
-    __pdoc__["Query.next"] = None
+    __pdoc__["Query.next"] = False
 
     def next(self):
         # Support python2 iterators
