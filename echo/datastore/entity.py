@@ -20,10 +20,6 @@ class Entity(object):
 
     Args:
         **data (kwargs): Values for properties in the new record, e.g User(name="Bob")
-
-    Attributes:
-        id (str or int): Unique id identifying this record,
-            if auto-generated, this is not available before `put()`
     """
     __metaclass__ = BaseEntityMeta
 
