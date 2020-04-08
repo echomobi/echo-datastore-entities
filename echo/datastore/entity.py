@@ -3,9 +3,12 @@ from six import string_types
 from future import builtins
 from echo.datastore.errors import InvalidKeyError, NotSavedException
 from echo.datastore import properties
+__pdoc__ = {}
 
 
 class BaseEntityMeta(type):
+    __pdoc__['BaseEntityMeta'] = None
+
     # Needed to support setting property names on python2
     def __new__(mcls, name, bases, attrs):
         cls = super(BaseEntityMeta, mcls).__new__(mcls, name, bases, attrs)
