@@ -12,7 +12,7 @@ class Property(object):
             default: The default value of the property
             required: Enforce the property value to be provided
         """
-        self.default = default
+        self.default = self.validate(default)
         self.required = required
         self.name = None
 
@@ -25,7 +25,8 @@ class Property(object):
 
     def __get__(self, instance, owner):
         value = instance.__datastore_entity__.get(self.name)
-        if self.default and value is None:
+        # Set the default value if no value is written
+        if (self.default is not None) and (self.name not in instance.__datastore_entity__):
             value = self.default
         value = self.user_value(value)
         return value
@@ -43,9 +44,6 @@ class Property(object):
         Returns:
             user_value: A type checked user value or the default value
         """
-        if self.required and self.default is None and user_value is None:
-            raise InvalidValueError(self, user_value)
-
         if not isinstance(user_value, data_types) and user_value is not None:
             raise InvalidValueError(self, user_value)
         return user_value
