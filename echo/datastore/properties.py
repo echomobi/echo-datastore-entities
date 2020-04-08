@@ -21,7 +21,10 @@ class Property(object):
 
     def __set__(self, instance, value):
         value = self.validate(value)
-        instance.__datastore_entity__[self.name] = value
+        current_value = instance.__datastore_entity__.get(self.name)
+        if current_value != value or self.name not in instance.__datastore_entity__:
+            instance.__has_changes__ = True
+            instance.__datastore_entity__[self.name] = value
 
     def __get__(self, instance, owner):
         value = instance.__datastore_entity__.get(self.name)
