@@ -166,7 +166,7 @@ class Query(object):
         if isinstance(order_by, (list, tuple)):
             order = order_by
         elif isinstance(order_by, str):
-            order = [str]
+            order = [order_by]
         self.__datastore_query = Entity.__get_client__().query(kind=entity.__entity_name__(), order=order)
         self.entity = entity
         self.keys_only = keys_only
@@ -758,7 +758,7 @@ length) key path.</p>
         if isinstance(order_by, (list, tuple)):
             order = order_by
         elif isinstance(order_by, str):
-            order = [str]
+            order = [order_by]
         self.__datastore_query = Entity.__get_client__().query(kind=entity.__entity_name__(), order=order)
         self.entity = entity
         self.keys_only = keys_only
