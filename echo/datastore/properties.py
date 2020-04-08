@@ -1,5 +1,6 @@
 from echo.datastore.errors import InvalidValueError
 from datetime import datetime
+import pytz
 
 
 class Property(object):
@@ -77,12 +78,19 @@ class IntegerProperty(Property):
 
 
 class DateTimeProperty(Property):
+    """Accepts a python datetime instance
+    Notes:
+        - Dates are automatically localized to UTC
+    """
     def __init__(self, auto_now_add=False, required=False):
         default = datetime.now() if auto_now_add else None
         super(DateTimeProperty, self).__init__(default=default, required=required)
 
     def validate(self, user_value):
-        return self.__type_check__(user_value, datetime)
+        user_value = self.__type_check__(user_value, datetime)
+        if user_value:
+            user_value = pytz.utc.localize(user_value)
+        return user_value
 
     def user_value(self, value):
         return value
