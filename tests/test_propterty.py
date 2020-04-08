@@ -28,8 +28,6 @@ class PropertiesTestCase(unittest.TestCase):
 
         # Default value should be set on get
         self.assertEqual(self.entity.integer_property_with_default, 10)
-        # You can't set a required property to null
-        self.assertRaises(errors.InvalidValueError, setattr, self.entity, "integer_property_required", None)
 
     def test_integer_property(self):
         # Setting a value should update it's value in the __datastore_entity__ dict

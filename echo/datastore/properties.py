@@ -12,7 +12,7 @@ class Property(object):
             default: The default value of the property
             required: Enforce the property value to be provided
         """
-        self.default = self.validate(default)
+        self.default = None if default is None else self.validate(default)
         self.required = required
         self.name = None
 
