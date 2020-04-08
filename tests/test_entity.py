@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 from echo.datastore import Entity, db
 from echo.datastore.errors import NotSavedException, InvalidKeyError, InvalidValueError
 from google.cloud.datastore.client import Client, Key, Entity as DatastoreEntity
@@ -7,10 +8,12 @@ from google.cloud.datastore.client import Client, Key, Entity as DatastoreEntity
 class TestEntity(Entity):
     prop1 = db.TextProperty()
     prop2 = db.IntegerProperty()
+    required_property = db.DateTimeProperty(required=True)
+    required_default = db.DateTimeProperty(auto_now_add=True, required=True)
 
 
 class TestEntityTestCase(unittest.TestCase):
-    def assertRaisesWithMessage(self, expected_exception, message, function,  *args, **kwargs):
+    def assertRaisesWithMessage(self, expected_exception, message, function, *args, **kwargs):
         try:
             function(*args, **kwargs)
             self.fail()
@@ -34,11 +37,14 @@ class TestEntityTestCase(unittest.TestCase):
         entity = TestEntity()
         # Test setting invalid values
         message = "10 is not a valid value for property prop1 of type TextProperty"
-        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop1", 10)  # Text property setting int
+        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop1",
+                                     10)  # Text property setting int
         message = "text is not a valid value for property prop2 of type IntegerProperty"
-        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop2", "text")  # Int property setting Text
+        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop2",
+                                     "text")  # Int property setting Text
         message = "10.3 is not a valid value for property prop2 of type IntegerProperty"
-        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop2", 10.3)  # Int property setting Float
+        self.assertRaisesWithMessage(InvalidValueError, message, setattr, entity, "prop2",
+                                     10.3)  # Int property setting Float
 
     def test_key_generation(self):
         entity = TestEntity()
@@ -78,3 +84,32 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get, 10)
         self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get,
                                      Key('AnotherEntity', 10, project=Entity.__get_client__().project))
+
+    def test_put(self):
+        entity = TestEntity()
+        self.assertFalse(entity.is_saved())
+        # Test that we can't put without setting the value of a required entity
+        self.assertRaisesWithMessage(ValueError, "Required field 'required_property' is not set for TestEntity",
+                                     entity.put)
+        # Test that we can save an entity without adding non-required values
+        entity.required_property = datetime.now()
+        entity.put()
+        self.assertTrue(entity.is_saved())
+        saved_entity = TestEntity.get(str(entity.key()))
+        self.assertEqual(saved_entity.id, entity.id)
+        self.assertEqual(saved_entity.key(), saved_entity.key())
+        self.assertEqual(saved_entity.required_property, entity.required_property)
+        # Confirm that we set the default value and it was written to datastore
+        self.assertIsInstance(saved_entity.__datastore_entity__.get("required_default"), datetime)
+        self.assertTrue(saved_entity.is_saved())
+        # Confirm that a default value can be explicitly set as None
+        saved_entity.required_property = None
+        self.assertFalse(saved_entity.is_saved())
+        saved_entity.put()
+        self.assertIsNone(saved_entity.__datastore_entity__["required_property"])
+        self.assertTrue(saved_entity.is_saved())
+        # Confirm that delete deletes a value from the entity
+        del saved_entity.required_property
+        self.assertFalse(saved_entity.is_saved())
+        self.assertRaisesWithMessage(ValueError, "Required field 'required_property' is not set for TestEntity",
+                                     saved_entity.put)
