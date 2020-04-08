@@ -92,18 +92,14 @@ jobs:
             . venv/bin/activate && coverage run tests/run.py && deactivate
 
       - run:
-          name: ++ Report python 3 coverage
-          command: . venv/bin/activate && codecov && deactivate
-
-      - run:
           name: ++ Run Tests on Python 2
           command: |
             $(gcloud beta emulators datastore env-init)
-            . venv2/bin/activate && coverage run tests/run.py && deactivate
+            . venv2/bin/activate && coverage run -a tests/run.py && deactivate
 
       - run:
-          name: ++ Report python 2 Coverage
-          command: . venv2/bin/activate && codecov && deactivate
+          name: ++ Report coverage
+          command: . venv/bin/activate && codecov && deactivate
 
   build_docs:
     environment:
