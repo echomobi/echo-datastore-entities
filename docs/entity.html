@@ -56,10 +56,9 @@ class Entity(object):
         if type(self) is Entity:
             raise Exception(&#34;You must extend Entity&#34;)
         project = db_utils.__client__().project
-        self.__has_changes__ = True
+        self.__changes__ = []
         if &#34;__entity__&#34; in data:
             self.__datastore_entity__ = data.get(&#34;__entity__&#34;)
-            self.__has_changes__ = False
             del data[&#34;__entity__&#34;]
         elif &#34;id&#34; in data:
             self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), data.get(&#34;id&#34;), project=project))
@@ -166,22 +165,31 @@ class Entity(object):
         Returns:
             Boolean: True if no changes have been made
         &#34;&#34;&#34;
-        return not self.__has_changes__
+        if self.__changes__ or self.__datastore_entity__.key.is_partial:
+            return False
+        return True
 
     def __pre_put_check__(self):
         for name, required, default in self.__field_set:
-            if required and name not in self.__datastore_entity__:
+            if name not in self.__datastore_entity__:
+                if default is None and required:
+                    raise ValueError(&#34;Required field &#39;%s&#39; is not set for %s&#34; % (name, self.__entity_name__()))
                 if default is not None:
                     self.__datastore_entity__[name] = default
-                else:
-                    raise ValueError(&#34;Required field &#39;%s&#39; is not set for %s&#34; % (name, self.__entity_name__()))
 
     def put(self):
         &#34;&#34;&#34;Save changes made on this entity to datastore. Won&#39;t call datastore if no changes were made&#34;&#34;&#34;
         db_utils.put(self)
 
-    def post_put(self):
-        &#34;&#34;&#34;Override this function to run logic after saving the entity&#34;&#34;&#34;
+    def post_put(self, changes):
+        &#34;&#34;&#34;Override this function to run logic after saving the entity
+
+        Args:
+            changes (list): A list of fields that have been updated during put
+
+        Notes:
+            This function won&#39;t be called if there&#39;re no changes
+        &#34;&#34;&#34;
 
     def pre_put(self):
         &#34;&#34;&#34;Override this function to run logic just before saving the entity
@@ -348,10 +356,9 @@ class Key(DatastoreKey):
         if type(self) is Entity:
             raise Exception(&#34;You must extend Entity&#34;)
         project = db_utils.__client__().project
-        self.__has_changes__ = True
+        self.__changes__ = []
         if &#34;__entity__&#34; in data:
             self.__datastore_entity__ = data.get(&#34;__entity__&#34;)
-            self.__has_changes__ = False
             del data[&#34;__entity__&#34;]
         elif &#34;id&#34; in data:
             self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), data.get(&#34;id&#34;), project=project))
@@ -458,22 +465,31 @@ class Key(DatastoreKey):
         Returns:
             Boolean: True if no changes have been made
         &#34;&#34;&#34;
-        return not self.__has_changes__
+        if self.__changes__ or self.__datastore_entity__.key.is_partial:
+            return False
+        return True
 
     def __pre_put_check__(self):
         for name, required, default in self.__field_set:
-            if required and name not in self.__datastore_entity__:
+            if name not in self.__datastore_entity__:
+                if default is None and required:
+                    raise ValueError(&#34;Required field &#39;%s&#39; is not set for %s&#34; % (name, self.__entity_name__()))
                 if default is not None:
                     self.__datastore_entity__[name] = default
-                else:
-                    raise ValueError(&#34;Required field &#39;%s&#39; is not set for %s&#34; % (name, self.__entity_name__()))
 
     def put(self):
         &#34;&#34;&#34;Save changes made on this entity to datastore. Won&#39;t call datastore if no changes were made&#34;&#34;&#34;
         db_utils.put(self)
 
-    def post_put(self):
-        &#34;&#34;&#34;Override this function to run logic after saving the entity&#34;&#34;&#34;
+    def post_put(self, changes):
+        &#34;&#34;&#34;Override this function to run logic after saving the entity
+
+        Args:
+            changes (list): A list of fields that have been updated during put
+
+        Notes:
+            This function won&#39;t be called if there&#39;re no changes
+        &#34;&#34;&#34;
 
     def pre_put(self):
         &#34;&#34;&#34;Override this function to run logic just before saving the entity
@@ -650,7 +666,9 @@ Always returns true for a new entity</p>
     Returns:
         Boolean: True if no changes have been made
     &#34;&#34;&#34;
-    return not self.__has_changes__</code></pre>
+    if self.__changes__ or self.__datastore_entity__.key.is_partial:
+        return False
+    return True</code></pre>
 </details>
 </dd>
 <dt id="echo.datastore.entity.Entity.key"><code class="name flex">
@@ -688,16 +706,30 @@ explicitly provided</dd>
 </details>
 </dd>
 <dt id="echo.datastore.entity.Entity.post_put"><code class="name flex">
-<span>def <span class="ident">post_put</span></span>(<span>self)</span>
+<span>def <span class="ident">post_put</span></span>(<span>self, changes)</span>
 </code></dt>
 <dd>
-<section class="desc"><p>Override this function to run logic after saving the entity</p></section>
+<section class="desc"><p>Override this function to run logic after saving the entity</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>changes</code></strong> :&ensp;<code>list</code></dt>
+<dd>A list of fields that have been updated during put</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>This function won't be called if there're no changes</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def post_put(self):
-    &#34;&#34;&#34;Override this function to run logic after saving the entity&#34;&#34;&#34;</code></pre>
+<pre><code class="python">def post_put(self, changes):
+    &#34;&#34;&#34;Override this function to run logic after saving the entity
+
+    Args:
+        changes (list): A list of fields that have been updated during put
+
+    Notes:
+        This function won&#39;t be called if there&#39;re no changes
+    &#34;&#34;&#34;</code></pre>
 </details>
 </dd>
 <dt id="echo.datastore.entity.Entity.pre_put"><code class="name flex">
