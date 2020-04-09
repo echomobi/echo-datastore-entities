@@ -30,10 +30,9 @@ class Entity(object):
         if type(self) is Entity:
             raise Exception("You must extend Entity")
         project = db_utils.__client__().project
-        self.__has_changes__ = True
+        self.__changes__ = []
         if "__entity__" in data:
             self.__datastore_entity__ = data.get("__entity__")
-            self.__has_changes__ = False
             del data["__entity__"]
         elif "id" in data:
             self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), data.get("id"), project=project))
@@ -140,22 +139,31 @@ class Entity(object):
         Returns:
             Boolean: True if no changes have been made
         """
-        return not self.__has_changes__
+        if self.__changes__ or self.__datastore_entity__.key.is_partial:
+            return False
+        return True
 
     def __pre_put_check__(self):
         for name, required, default in self.__field_set:
-            if required and name not in self.__datastore_entity__:
+            if name not in self.__datastore_entity__:
+                if default is None and required:
+                    raise ValueError("Required field '%s' is not set for %s" % (name, self.__entity_name__()))
                 if default is not None:
                     self.__datastore_entity__[name] = default
-                else:
-                    raise ValueError("Required field '%s' is not set for %s" % (name, self.__entity_name__()))
 
     def put(self):
         """Save changes made on this entity to datastore. Won't call datastore if no changes were made"""
         db_utils.put(self)
 
-    def post_put(self):
-        """Override this function to run logic after saving the entity"""
+    def post_put(self, changes):
+        """Override this function to run logic after saving the entity
+
+        Args:
+            changes (list): A list of fields that have been updated during put
+
+        Notes:
+            This function won't be called if there're no changes
+        """
 
     def pre_put(self):
         """Override this function to run logic just before saving the entity

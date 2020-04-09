@@ -24,7 +24,8 @@ class Property(object):
         value = self.validate(value)
         current_value = instance.__datastore_entity__.get(self.name)
         if current_value != value or self.name not in instance.__datastore_entity__:
-            instance.__has_changes__ = True
+            if self.name not in instance.__changes__:
+                instance.__changes__.append(self.name)
             instance.__datastore_entity__[self.name] = value
 
     def __get__(self, instance, owner):
@@ -37,7 +38,8 @@ class Property(object):
 
     def __delete__(self, instance):
         del instance.__datastore_entity__[self.name]
-        instance.__has_changes__ = True
+        if self.name not in instance.__changes__:
+            instance.__changes__.append(self.name)
 
     def __type_check__(self, user_value, data_types):
         """
