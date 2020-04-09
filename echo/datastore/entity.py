@@ -1,8 +1,7 @@
 from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey
 from six import string_types
-from future import builtins
 from echo.datastore.errors import InvalidKeyError, NotSavedException, InvalidValueError
-from echo.datastore import properties
+from echo.datastore import properties, db_utils
 
 __pdoc__ = {}
 
@@ -30,11 +29,18 @@ class Entity(object):
     def __init__(self, **data):
         if type(self) is Entity:
             raise Exception("You must extend Entity")
-        self.id = None
+        project = db_utils.__client__().project
         self.__has_changes__ = True
-        if "id" in data:
-            self.id = data.get("id")
-        self.__datastore_entity__ = DatastoreEntity(key=self.key(partial=True))
+        if "__entity__" in data:
+            self.__datastore_entity__ = data.get("__entity__")
+            self.__has_changes__ = False
+            del data["__entity__"]
+        elif "id" in data:
+            self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), data.get("id"), project=project))
+            del data["id"]
+        else:
+            self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), project=project))
+
         for key, value in data.items():
             setattr(self, key, value)
         self.__field_set = self.__get_field_set()
@@ -49,25 +55,18 @@ class Entity(object):
                 pass
         return props
 
-    def key(self, partial=False):
+    def key(self):
         """Generates a key for this Entity
-        Args:
-            partial: Returns a partial key if an ID doesn't exist
-
         Returns:
             An instance of a key, convert to string to get a urlsafe key
 
         Raises:
-            NotSavedException: Raised if reading a key of an unsaved entity unless partial is true or the ID is
-            explicitly provided
+            NotSavedException: Raised if reading a key of an unsaved entity unless the ID is
+                explicitly provided
         """
-        paths = [self.__entity_name__()]
-        if not self.id and not partial:
+        if self.__datastore_entity__.key.is_partial:
             raise NotSavedException()
-        if self.id:
-            paths.append(self.id)
-        project = Entity.__get_client__().project
-        return Key(*paths, project=project)
+        return Key(*self.__datastore_entity__.key.flat_path, project=db_utils.__client__().project)
 
     @classmethod
     def get(cls, key):
@@ -93,11 +92,9 @@ class Entity(object):
 
         if not isinstance(key, Key) or cls.__entity_name__() != key.kind:
             raise InvalidKeyError(cls)
-        ds_entity = Entity.__get_client__().get(key=key)
+        ds_entity = db_utils.__client__().get(key=key)
         if ds_entity:
-            entity = cls(id=key.id_or_name)
-            entity.__datastore_entity__ = ds_entity
-            entity.__has_changes__ = False
+            entity = cls(__entity__=ds_entity)
             return entity
 
     @classmethod
@@ -113,7 +110,7 @@ class Entity(object):
 
             Returns None if the id doesn't exist in the database
         """
-        key = Key(cls.__name__, entity_id, project=cls.__get_client__().project)
+        key = Key(cls.__name__, entity_id, project=db_utils.__client__().project)
         return cls.get(key)
 
     @classmethod
@@ -269,10 +266,8 @@ class Query(object):
     def __process_result_item(self, result_item):
         if self.keys_only:
             # The result is a datastore entity with only a key
-            return Key(result_item.kind, result_item.id, project=Entity.__get_client__().project)
-        entity = self.entity(id=result_item.id)
-        entity.__datastore_entity__ = result_item
-        entity.__has_changes__ = False
+            return Key(result_item.kind, result_item.id, project=db_utils.__client__().project)
+        entity = self.entity(__entity__=result_item)
         return entity
 
     def __iter__(self):
