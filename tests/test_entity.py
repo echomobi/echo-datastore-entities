@@ -15,6 +15,9 @@ class TestEntity(Entity):
 
 
 class TestEntityTestCase(unittest.TestCase):
+    def tearDown(self):
+        db_utils.delete(TestEntity.query())
+
     def assertRaisesWithMessage(self, expected_exception, message, function, *args, **kwargs):
         try:
             function(*args, **kwargs)
@@ -87,6 +90,26 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get,
                                      Key('AnotherEntity', 10, project=db_utils.__client__().project))
 
+    def test_entity_comparison(self):
+        entity = TestEntity(required_property=None)
+        self.assertRaises(NotSavedException, entity.delete)  # You can't delete an unsaved entity
+        entity.put()
+        key = str(entity.key())
+        saved_entity = TestEntity.get(key)
+        self.assertEqual(entity, saved_entity)
+        saved_entity.prop1 = "Text values"
+        self.assertNotEqual(saved_entity, entity)
+        entity.prop1 = "Text values"
+        self.assertEqual(saved_entity, entity)
+        # Compare entities with different keys but equal values
+        separate_entity = TestEntity(required_property=entity.required_property,
+                                     required_default=entity.required_default, prop1=entity.prop1, prop2=entity.prop2)
+        self.assertNotEqual(entity, separate_entity)
+        separate_entity.put()
+        self.assertNotEqual(saved_entity, separate_entity)
+        self.assertEqual(saved_entity, entity)
+        self.assertEqual(separate_entity, TestEntity.get(separate_entity.key()))
+
     def test_put(self):
         entity = TestEntity()
         self.assertFalse(entity.is_saved())
@@ -98,8 +121,7 @@ class TestEntityTestCase(unittest.TestCase):
         entity.put()
         self.assertTrue(entity.is_saved())
         saved_entity = TestEntity.get(str(entity.key()))
-        self.assertEqual(saved_entity.key().id, entity.key().id)
-        self.assertEqual(saved_entity.key(), saved_entity.key())
+        self.assertEqual(saved_entity, entity)
         self.assertEqual(saved_entity.required_property, entity.required_property)
         # Confirm that we set the default value and it was written to datastore
         self.assertIsInstance(saved_entity.__datastore_entity__.get("required_default"), datetime)
@@ -154,3 +176,20 @@ class TestEntityTestCase(unittest.TestCase):
             call(["prop1"]),
             call(["required_default"])
         ])
+
+    def test_delete(self):
+        entity = TestEntity(required_property=None)
+        self.assertRaises(NotSavedException, entity.delete)  # You can't delete an unsaved entity
+        entity.put()
+        key = str(entity.key())
+        saved_entity = TestEntity.get(key)
+        self.assertEqual(entity, saved_entity)
+        saved_entity.delete()
+        self.assertIsNone(TestEntity.get(key))
+        entities = [TestEntity(id=i, required_property=None) for i in range(1, 11)]
+        db.put(entities)
+        keys = [str(entity.key()) for entity in entities]
+        self.assertEqual(entities, [TestEntity.get(key) for key in keys])
+        db.delete(entities)
+        for key in keys:
+            self.assertIsNone(TestEntity.get(key))
