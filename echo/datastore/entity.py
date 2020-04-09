@@ -23,6 +23,9 @@ class Entity(object):
 
     Args:
         **data (kwargs): Values for properties in the new record, e.g User(name="Bob")
+
+    Notes:
+        Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)
     """
     __metaclass__ = BaseEntityMeta
 
@@ -170,9 +173,19 @@ class Entity(object):
         NB: This function won't be called if no changes were made. i.e. when self.is_saved() == True
         """
 
+    def delete(self):
+        """Delete an entity from datastore"""
+        db_utils.delete(self)
+
+    def pre_delete(self):
+        """Override this function to run any logic before deleting the entity. e.g. clear cache"""
+
     @classmethod
     def __entity_name__(cls):
         return cls.__name__
+
+    def __eq__(self, other):
+        return self.__datastore_entity__ == other.__datastore_entity__
 
 
 class Query(object):
