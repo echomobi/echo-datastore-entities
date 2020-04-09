@@ -49,6 +49,9 @@ class Entity(object):
 
     Args:
         **data (kwargs): Values for properties in the new record, e.g User(name=&#34;Bob&#34;)
+
+    Notes:
+        Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)
     &#34;&#34;&#34;
     __metaclass__ = BaseEntityMeta
 
@@ -196,9 +199,19 @@ class Entity(object):
         NB: This function won&#39;t be called if no changes were made. i.e. when self.is_saved() == True
         &#34;&#34;&#34;
 
+    def delete(self):
+        &#34;&#34;&#34;Delete an entity from datastore&#34;&#34;&#34;
+        db_utils.delete(self)
+
+    def pre_delete(self):
+        &#34;&#34;&#34;Override this function to run any logic before deleting the entity. e.g. clear cache&#34;&#34;&#34;
+
     @classmethod
     def __entity_name__(cls):
         return cls.__name__
+
+    def __eq__(self, other):
+        return self.__datastore_entity__ == other.__datastore_entity__
 
 
 class Query(object):
@@ -339,7 +352,9 @@ class Key(DatastoreKey):
 <dl>
 <dt><strong><code>**data</code></strong> :&ensp;<code>kwargs</code></dt>
 <dd>Values for properties in the new record, e.g User(name="Bob")</dd>
-</dl></section>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)</p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -349,6 +364,9 @@ class Key(DatastoreKey):
 
     Args:
         **data (kwargs): Values for properties in the new record, e.g User(name=&#34;Bob&#34;)
+
+    Notes:
+        Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)
     &#34;&#34;&#34;
     __metaclass__ = BaseEntityMeta
 
@@ -496,9 +514,19 @@ class Key(DatastoreKey):
         NB: This function won&#39;t be called if no changes were made. i.e. when self.is_saved() == True
         &#34;&#34;&#34;
 
+    def delete(self):
+        &#34;&#34;&#34;Delete an entity from datastore&#34;&#34;&#34;
+        db_utils.delete(self)
+
+    def pre_delete(self):
+        &#34;&#34;&#34;Override this function to run any logic before deleting the entity. e.g. clear cache&#34;&#34;&#34;
+
     @classmethod
     def __entity_name__(cls):
-        return cls.__name__</code></pre>
+        return cls.__name__
+
+    def __eq__(self, other):
+        return self.__datastore_entity__ == other.__datastore_entity__</code></pre>
 </details>
 <h3>Static methods</h3>
 <dl>
@@ -644,6 +672,20 @@ def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
 </dl>
 <h3>Methods</h3>
 <dl>
+<dt id="echo.datastore.entity.Entity.delete"><code class="name flex">
+<span>def <span class="ident">delete</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Delete an entity from datastore</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def delete(self):
+    &#34;&#34;&#34;Delete an entity from datastore&#34;&#34;&#34;
+    db_utils.delete(self)</code></pre>
+</details>
+</dd>
 <dt id="echo.datastore.entity.Entity.is_saved"><code class="name flex">
 <span>def <span class="ident">is_saved</span></span>(<span>self)</span>
 </code></dt>
@@ -730,6 +772,19 @@ explicitly provided</dd>
     Notes:
         This function won&#39;t be called if there&#39;re no changes
     &#34;&#34;&#34;</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Entity.pre_delete"><code class="name flex">
+<span>def <span class="ident">pre_delete</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Override this function to run any logic before deleting the entity. e.g. clear cache</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def pre_delete(self):
+    &#34;&#34;&#34;Override this function to run any logic before deleting the entity. e.g. clear cache&#34;&#34;&#34;</code></pre>
 </details>
 </dd>
 <dt id="echo.datastore.entity.Entity.pre_put"><code class="name flex">
@@ -1194,11 +1249,13 @@ length) key path.</p>
 <li>
 <h4><code><a title="echo.datastore.entity.Entity" href="#echo.datastore.entity.Entity">Entity</a></code></h4>
 <ul class="two-column">
+<li><code><a title="echo.datastore.entity.Entity.delete" href="#echo.datastore.entity.Entity.delete">delete</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.get" href="#echo.datastore.entity.Entity.get">get</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.get_by_id" href="#echo.datastore.entity.Entity.get_by_id">get_by_id</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.is_saved" href="#echo.datastore.entity.Entity.is_saved">is_saved</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.key" href="#echo.datastore.entity.Entity.key">key</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.post_put" href="#echo.datastore.entity.Entity.post_put">post_put</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.pre_delete" href="#echo.datastore.entity.Entity.pre_delete">pre_delete</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.pre_put" href="#echo.datastore.entity.Entity.pre_put">pre_put</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.put" href="#echo.datastore.entity.Entity.put">put</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.query" href="#echo.datastore.entity.Entity.query">query</a></code></li>
