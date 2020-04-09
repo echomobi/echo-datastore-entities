@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.7.5" />
-<title>echo.datastore API documentation</title>
+<title>echo.datastore.db_utils API documentation</title>
 <meta name="description" content="" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
@@ -17,44 +17,126 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>echo.datastore</code></h1>
+<h1 class="title">Module <code>echo.datastore.db_utils</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from echo.datastore.entity import Entity</code></pre>
+<pre><code class="python">from concurrent.futures import ThreadPoolExecutor
+from future import builtins
+from google.cloud.datastore.client import Client
+
+
+def put(entities):
+    &#34;&#34;&#34;Save entities to datastore
+
+    Args:
+        entities: An entity or a list of entities
+    &#34;&#34;&#34;
+    return put_async(entities).result()
+
+
+def put_async(entities):
+    &#34;&#34;&#34;Save to datastore asynchronously
+    Args:
+        entities: An entity or a list of entities
+    Returns:
+        A future object. Use future.result() to wait for or get the results if ready
+    &#34;&#34;&#34;
+    if not hasattr(entities, &#34;__iter__&#34;):
+        entities = [entities]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        return executor.submit(__process_and_put_entities__, entities)
+
+
+def __process_and_put_entities__(entities):
+    datastore_entities = []
+    changed_entities = []
+    for entity in entities:
+        entity.__pre_put_check__()
+        entity.pre_put()
+        if entity.is_saved():
+            continue
+        datastore_entities.append(entity.__datastore_entity__)
+        changed_entities.append(entity)
+    if datastore_entities:
+        __client__().put_multi(datastore_entities)
+        for entity in changed_entities:
+            entity.__has_changes__ = False
+            entity.post_put()
+
+
+def __client__():
+    if not hasattr(builtins, &#34;__datastore_client__&#34;):
+        setattr(builtins, &#34;__datastore_client__&#34;, Client())
+    return getattr(builtins, &#34;__datastore_client__&#34;)</code></pre>
 </details>
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt><code class="name"><a title="echo.datastore.db" href="db.html">echo.datastore.db</a></code></dt>
+<dt id="echo.datastore.db_utils.put"><code class="name flex">
+<span>def <span class="ident">put</span></span>(<span>entities)</span>
+</code></dt>
 <dd>
-<section class="desc"></section>
+<section class="desc"><p>Save entities to datastore</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>entities</code></strong></dt>
+<dd>An entity or a list of entities</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def put(entities):
+    &#34;&#34;&#34;Save entities to datastore
+
+    Args:
+        entities: An entity or a list of entities
+    &#34;&#34;&#34;
+    return put_async(entities).result()</code></pre>
+</details>
 </dd>
-<dt><code class="name"><a title="echo.datastore.db_utils" href="db_utils.html">echo.datastore.db_utils</a></code></dt>
+<dt id="echo.datastore.db_utils.put_async"><code class="name flex">
+<span>def <span class="ident">put_async</span></span>(<span>entities)</span>
+</code></dt>
 <dd>
-<section class="desc"></section>
-</dd>
-<dt><code class="name"><a title="echo.datastore.entity" href="entity.html">echo.datastore.entity</a></code></dt>
-<dd>
-<section class="desc"></section>
-</dd>
-<dt><code class="name"><a title="echo.datastore.errors" href="errors.html">echo.datastore.errors</a></code></dt>
-<dd>
-<section class="desc"></section>
-</dd>
-<dt><code class="name"><a title="echo.datastore.properties" href="properties.html">echo.datastore.properties</a></code></dt>
-<dd>
-<section class="desc"></section>
+<section class="desc"><p>Save to datastore asynchronously</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>entities</code></strong></dt>
+<dd>An entity or a list of entities</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>A</code> <code>future</code> <code>object.</code> <code>Use</code> <code>future.result</code>() <code>to</code> <code>wait</code> <code>for</code> or <code>get</code> <code>the</code> <code>results</code> <code>if</code> <code>ready</code></dt>
+<dd>&nbsp;</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def put_async(entities):
+    &#34;&#34;&#34;Save to datastore asynchronously
+    Args:
+        entities: An entity or a list of entities
+    Returns:
+        A future object. Use future.result() to wait for or get the results if ready
+    &#34;&#34;&#34;
+    if not hasattr(entities, &#34;__iter__&#34;):
+        entities = [entities]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        return executor.submit(__process_and_put_entities__, entities)</code></pre>
+</details>
 </dd>
 </dl>
-</section>
-<section>
-</section>
-<section>
 </section>
 <section>
 </section>
@@ -65,13 +147,15 @@
 <ul></ul>
 </div>
 <ul id="index">
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<li><h3>Super-module</h3>
 <ul>
-<li><code><a title="echo.datastore.db" href="db.html">echo.datastore.db</a></code></li>
-<li><code><a title="echo.datastore.db_utils" href="db_utils.html">echo.datastore.db_utils</a></code></li>
-<li><code><a title="echo.datastore.entity" href="entity.html">echo.datastore.entity</a></code></li>
-<li><code><a title="echo.datastore.errors" href="errors.html">echo.datastore.errors</a></code></li>
-<li><code><a title="echo.datastore.properties" href="properties.html">echo.datastore.properties</a></code></li>
+<li><code><a title="echo.datastore" href="index.html">echo.datastore</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="echo.datastore.db_utils.put" href="#echo.datastore.db_utils.put">put</a></code></li>
+<li><code><a title="echo.datastore.db_utils.put_async" href="#echo.datastore.db_utils.put_async">put_async</a></code></li>
 </ul>
 </li>
 </ul>
