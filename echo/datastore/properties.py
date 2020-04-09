@@ -89,7 +89,7 @@ class DateTimeProperty(Property):
 
     def validate(self, user_value):
         user_value = self.__type_check__(user_value, datetime)
-        if user_value:
+        if user_value and not user_value.tzinfo:
             user_value = pytz.utc.localize(user_value)
         return user_value
 
