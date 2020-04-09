@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime
-from echo.datastore import Entity, db
+from echo.datastore import Entity, db, db_utils
 from echo.datastore.errors import NotSavedException, InvalidKeyError, InvalidValueError
 from google.cloud.datastore.client import Client, Key, Entity as DatastoreEntity
 
@@ -21,7 +21,7 @@ class TestEntityTestCase(unittest.TestCase):
             self.assertEqual(str(ex), message)
 
     def test_client(self):
-        self.assertIsInstance(Entity.__get_client__(), Client)
+        self.assertIsInstance(db_utils.__client__(), Client)
 
     def test_entity_creation(self):
         self.assertRaisesWithMessage(Exception, "You must extend Entity", Entity, id=30)
@@ -51,8 +51,8 @@ class TestEntityTestCase(unittest.TestCase):
         # You should not get a key for an unsaved entity
         self.assertRaisesWithMessage(NotSavedException, "You can't read a key of an unsaved entity", entity.key)
 
-        entity = TestEntity(id=10)
-        project = Entity.__get_client__().project
+        entity = TestEntity(id=10, required_property=datetime.now())
+        project = db_utils.__client__().project
         expected_key = Key('TestEntity', 10, project=project)
         self.assertEqual(str(entity.key()), expected_key.to_legacy_urlsafe().decode("utf-8"))
         self.assertEqual(entity.key().id, 10)
@@ -83,7 +83,7 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get, "INVALID_KEY")
         self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get, 10)
         self.assertRaisesWithMessage(InvalidKeyError, message, TestEntity.get,
-                                     Key('AnotherEntity', 10, project=Entity.__get_client__().project))
+                                     Key('AnotherEntity', 10, project=db_utils.__client__().project))
 
     def test_put(self):
         entity = TestEntity()
@@ -96,7 +96,7 @@ class TestEntityTestCase(unittest.TestCase):
         entity.put()
         self.assertTrue(entity.is_saved())
         saved_entity = TestEntity.get(str(entity.key()))
-        self.assertEqual(saved_entity.id, entity.id)
+        self.assertEqual(saved_entity.key().id, entity.key().id)
         self.assertEqual(saved_entity.key(), saved_entity.key())
         self.assertEqual(saved_entity.required_property, entity.required_property)
         # Confirm that we set the default value and it was written to datastore

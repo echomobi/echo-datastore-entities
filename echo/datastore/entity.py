@@ -142,20 +142,17 @@ class Entity(object):
         """
         return not self.__has_changes__
 
-    def put(self):
-        self.pre_put()
+    def __pre_put_check__(self):
         for name, required, default in self.__field_set:
             if required and name not in self.__datastore_entity__:
                 if default is not None:
                     self.__datastore_entity__[name] = default
                 else:
                     raise ValueError("Required field '%s' is not set for %s" % (name, self.__entity_name__()))
-        if self.is_saved():
-            return
-        Entity.__get_client__().put(self.__datastore_entity__)
-        self.id = self.__datastore_entity__.id
-        self.__has_changes__ = False
-        self.post_put()
+
+    def put(self):
+        """Save changes made on this entity to datastore. Won't call datastore if no changes were made"""
+        db_utils.put(self)
 
     def post_put(self):
         """Override this function to run logic after saving the entity"""
@@ -169,12 +166,6 @@ class Entity(object):
     def __entity_name__(cls):
         return cls.__name__
 
-    @staticmethod
-    def __get_client__():
-        if not hasattr(builtins, "__datastore_client__"):
-            setattr(builtins, "__datastore_client__", Client())
-        return getattr(builtins, "__datastore_client__")
-
 
 class Query(object):
     def __init__(self, entity, keys_only=False, eventual=False, limit=None, order_by=None):
@@ -183,7 +174,7 @@ class Query(object):
             order = order_by
         elif isinstance(order_by, str):
             order = [order_by]
-        self.__datastore_query = Entity.__get_client__().query(kind=entity.__entity_name__(), order=order)
+        self.__datastore_query = db_utils.__client__().query(kind=entity.__entity_name__(), order=order)
         self.entity = entity
         self.keys_only = keys_only
         if keys_only:
