@@ -301,10 +301,22 @@ Generates a key for this Entity
 
 
     
-> `def post_put(self)`
+> `def post_put(self, changes)`
 
 
 Override this function to run logic after saving the entity
+
+
+###### Args
+
+**`changes`** :&ensp;`list`
+:   A list of fields that have been updated during put
+
+
+
+###### Notes
+
+This function won't be called if there're no changes
 
 
     

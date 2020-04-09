@@ -55,8 +55,8 @@ def __process_and_put_entities__(entities):
     datastore_entities = []
     changed_entities = []
     for entity in entities:
-        entity.__pre_put_check__()
         entity.pre_put()
+        entity.__pre_put_check__()
         if entity.is_saved():
             continue
         datastore_entities.append(entity.__datastore_entity__)
@@ -64,8 +64,8 @@ def __process_and_put_entities__(entities):
     if datastore_entities:
         __client__().put_multi(datastore_entities)
         for entity in changed_entities:
-            entity.__has_changes__ = False
-            entity.post_put()
+            entity.post_put(entity.__changes__)
+            entity.__changes__ = []
 
 
 def __client__():
