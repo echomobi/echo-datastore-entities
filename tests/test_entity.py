@@ -3,6 +3,7 @@ from datetime import datetime
 from echo.datastore import Entity, db, db_utils
 from echo.datastore.errors import NotSavedException, InvalidKeyError, InvalidValueError
 from google.cloud.datastore.client import Client, Key, Entity as DatastoreEntity
+from mock import patch, call
 
 
 class TestEntity(Entity):
@@ -10,6 +11,7 @@ class TestEntity(Entity):
     prop2 = db.IntegerProperty()
     required_property = db.DateTimeProperty(required=True)
     required_default = db.DateTimeProperty(auto_now_add=True, required=True)
+    class_prop = None
 
 
 class TestEntityTestCase(unittest.TestCase):
@@ -113,3 +115,42 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertFalse(saved_entity.is_saved())
         self.assertRaisesWithMessage(ValueError, "Required field 'required_property' is not set for TestEntity",
                                      saved_entity.put)
+
+    @patch("google.cloud.datastore.client.Client.put_multi")
+    @patch("echo.datastore.entity.Entity.post_put")
+    @patch("echo.datastore.entity.Entity.pre_put")
+    def test_put_utils(self, pre_put_mock, post_put_mock, put_multi_mock):
+        entities = [TestEntity(id=i, required_property=None) for i in range(1, 11)]
+        # We shouldn't call pre-pu or post put on creation
+        entities[0].put()
+        pre_put_mock.assert_called_once()
+        put_multi_mock.assert_called_once_with([entities[0].__datastore_entity__])
+        post_put_mock.assert_called_once()
+        entities[0].put()
+        self.assertEqual(pre_put_mock.call_count, 2)
+        put_multi_mock.assert_called_once()
+        post_put_mock.assert_called_once()
+        # We don't put already saved items
+        post_put_mock.reset_mock()
+        pre_put_mock.reset_mock()
+        put_multi_mock.reset_mock()
+        db_utils.put(entities)
+        self.assertEqual(pre_put_mock.call_count, 10)
+        self.assertEqual(post_put_mock.call_count, 9)
+        put_multi_mock.assert_called_once_with([e.__datastore_entity__ for e in entities[1:]])
+        # We should only put changed items
+        entities[3].required_property = datetime.now()
+        entities[3].prop2 = 10
+        entities[7].prop1 = "Some text"
+        entities[9].required_default = None
+        post_put_mock.reset_mock()
+        pre_put_mock.reset_mock()
+        put_multi_mock.reset_mock()
+        db_utils.put(entities)
+        self.assertEqual(pre_put_mock.call_count, 10)
+        put_multi_mock.assert_called_once_with([e.__datastore_entity__ for e in [entities[3], entities[7], entities[9]]])
+        post_put_mock.assert_has_calls([
+            call(["required_property", "prop2"]),
+            call(["prop1"]),
+            call(["required_default"])
+        ])
