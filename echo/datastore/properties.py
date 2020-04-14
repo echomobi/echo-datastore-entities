@@ -25,6 +25,8 @@ class Property(object):
 
     def __get__(self, instance, owner):
         value = instance.__datastore_entity__.get(self.name)
+        if self.default and value is None:
+            value = self.default
         value = self.user_value(value)
         return value
 
@@ -43,9 +45,6 @@ class Property(object):
         """
         if self.required and self.default is None and user_value is None:
             raise InvalidValueError(self, user_value)
-        # Assign a default value if None is provided
-        if user_value is None:
-            user_value = self.default
 
         if not isinstance(user_value, data_types) and user_value is not None:
             raise InvalidValueError(self, user_value)

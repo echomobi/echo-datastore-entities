@@ -1,7 +1,70 @@
-version: 2
+version: 2.1
+
+commands:
+  restore_or_rebuild_python_cache:
+    description: "Restores python virtual environments from cache or rebuilds them and caches"
+    steps:
+      # Update cache version when requirements have not changed but different files are needed for the cache
+      - restore_cache:
+          name: Restore python cache
+          keys:
+            - requirements-v3-{{ checksum "requirements.txt" }}-{{ checksum "requirements.dev.txt" }}
+
+      - run:
+          name: Create venv and install requirements for python3
+          command: |
+            if [ -e ./venv ]; then
+              echo "Using cached venv"
+            else
+              echo "Creating venv and installing requirements for python 3"
+              python3.7 -m venv venv
+              . venv/bin/activate
+              pip install wheel
+              pip install -r requirements.txt
+              pip install -r requirements.dev.txt
+              deactivate
+            fi
+
+      - run:
+          name: Create venv and install requirements for python2
+          command: |
+            if [ -e ./venv2 ]; then
+              echo "Using cached venv"
+            else
+              echo "Creating venv and installing requirements for python 2"
+              python2.7 -m virtualenv venv2
+              . venv2/bin/activate
+              pip install wheel
+              pip install -r requirements.txt
+              pip install -r requirements.python2.dev.txt
+              deactivate
+            fi
+
+      - save_cache:
+          name: Save python cache
+          key: requirements-v3-{{ checksum "requirements.txt" }}-{{ checksum "requirements.dev.txt" }}
+          paths:
+            - ./venv
+            - ./venv2
+
+  checkout_with_push_access:
+    description: "Adds a deploy key with push access"
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "5d:f6:16:8c:c3:44:97:e2:09:6e:7e:f7:65:35:f9:80"
+
+      - checkout
+
+      - run:
+          name: Register git user details
+          command: |
+            git config --global user.name "echomobi-bot"
+            git config --global user.email "engineering@echomobile.org"
+            git branch --set-upstream-to=origin/$CIRCLE_BRANCH $CIRCLE_BRANCH
 
 jobs:
-  build:
+  run_tests:
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: "service_account.json"
     docker:
@@ -20,47 +83,133 @@ jobs:
           name: Add Service Account
           command: echo $FAKE_SERVICE_ACCOUNT>service_account.json
 
-      # Update cache version when requirements have not changed but different files are needed for the cache
-      - restore_cache:
-          name: Restore python cache
-          keys:
-            - requirements-v1-{{ checksum "requirements.txt" }}
+      - restore_or_rebuild_python_cache
 
       - run:
-          name: Create venv and install requirements for python 2 & 3
+          name: ++ Run Tests on Python 3
           command: |
-            if [ -e ./venv ]; then
-              echo "Using cached venv"
+            $(gcloud beta emulators datastore env-init)
+            . venv/bin/activate && coverage run tests/run.py && deactivate
+
+      - run:
+          name: ++ Run Tests on Python 2
+          command: |
+            $(gcloud beta emulators datastore env-init)
+            . venv2/bin/activate && coverage run -a tests/run.py && deactivate
+
+      - run:
+          name: ++ Report coverage
+          command: . venv/bin/activate && codecov && deactivate
+
+  build_docs:
+    environment:
+      PYTHONWARNINGS: "error::UserWarning"
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+    steps:
+      - checkout_with_push_access
+      - restore_or_rebuild_python_cache
+
+      - run:
+          command: >
+            tar
+            --sort=name --owner=root:0 --group=root:0 --mtime='UTC 2019-01-01'
+            -cf documented_code_cache.tar
+            ./echo
+          name: Preparing documentation cache
+
+      - restore_cache:
+          name: Restore Docs Build
+          keys:
+            - docs-cache-v6-{{ checksum "documented_code_cache.tar" }}
+
+      - run:
+          name: ++ Build Docs
+          command: |
+            if [ -e CACHE_PLACEHOLDER ]; then
+              echo "Docs are up to date"
             else
-              echo "Creating venv and installing requirements for python 3"
-              python3.7 -m venv venv
-              . venv/bin/activate && pip install -r requirements.txt && deactivate
-              echo "Creating venv and installing requirements for python 2"
-              python2.7 -m virtualenv venv2
-              . venv2/bin/activate && pip install -r requirements.txt && deactivate
+              . venv/bin/activate && \
+              pdoc --html --output-dir docs-build echo.datastore && \
+              pdoc --pdf echo.datastore>docs-build/echo/datastore/README.md && \
+              touch CACHE_PLACEHOLDER && \
+              deactivate
             fi
 
       - save_cache:
-          name: Save python cache
-          key: requirements-v1-{{ checksum "requirements.txt" }}
+          name: Save docs cache
+          key: docs-cache-v6-{{ checksum "documented_code_cache.tar" }}
           paths:
-            - ./venv
-            - ./venv2
+            - ./CACHE_PLACEHOLDER
 
       - run:
+          name: ++ Push new docs (Triggers new build)
           command: |
-            $(gcloud beta emulators datastore env-init)
+            if [ -e docs-build ]; then
+              [ -e docs ] && git rm -r docs
+              mkdir -p docs
+              mv docs-build/echo/datastore/* docs/
+              git add docs/
+              git commit -m "Docs Build $CIRCLE_BRANCH"
+              git push origin $CIRCLE_BRANCH
+            else
+              echo "Docs are upto date"
+            fi
+
+  build_package:
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+    steps:
+      - checkout
+      - restore_or_rebuild_python_cache
+      - run:
+          name: ++ Build Package
+          command: |
+            . venv/bin/activate && \
+            python setup.py sdist bdist_wheel && \
+            deactivate
+
+  release:
+    docker:
+      - image: echomobi/echomobile-ci:v1.2
+    working_directory: ~/datastore-entities
+    steps:
+      - checkout_with_push_access
+      - restore_or_rebuild_python_cache
+      - run:
+          name: ++ Release Package (master only)
+          command: |
             . venv/bin/activate
-            coverage run tests/run.py
-          name: ++ Run Tests on Python 3
+            if [[ $(git tag) == *v$(cat RELEASE)* ]]; then
+              echo "Version $(cat RELEASE) already released"
+            else
+              python setup.py sdist bdist_wheel
+              git tag v$(cat RELEASE)
+              echo -e "[pypi]" >> ~/.pypirc
+              echo -e "username = __token__" >> ~/.pypirc
+              echo -e "password = $PYPI_RELEASE_TOKEN" >> ~/.pypirc
+              twine upload --verbose dist/*
+              git push --tags
+            fi
+            deactivate
 
-      - run:
-          command: |
-            $(gcloud beta emulators datastore env-init)
-            . venv2/bin/activate
-            python tests/run.py
-          name: ++ Run Tests on Python 2
-
-      - run:
-          command: . venv/bin/activate && codecov
-          name: ++ Report Coverage
+workflows:
+  version: 2
+  test_and_build:
+    jobs:
+      - run_tests
+      - build_docs:
+          requires:
+            - run_tests
+      - build_package:
+          requires:
+            - run_tests
+      - release:
+          requires:
+            - build_package
+          filters:
+            branches:
+              only:
+                - master

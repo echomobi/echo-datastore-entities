@@ -1,0 +1,5 @@
+coverage==5.0.3
+codecov==2.0.16
+pdoc3==0.7.5
+wheel
+twine==3.1.1
