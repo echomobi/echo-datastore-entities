@@ -1,8 +1,9 @@
-from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey
+from google.cloud.datastore import Entity as DatastoreEntity, Key as DatastoreKey
 from six import string_types
-from echo.datastore.errors import InvalidKeyError, NotSavedException, InvalidValueError
+from echo.datastore.errors import InvalidKeyError, NotSavedException
 from echo.datastore import properties, db_utils
 
+# Override documentation for paths in this dictionary
 __pdoc__ = {}
 
 
@@ -25,7 +26,8 @@ class Entity(object):
         **data (kwargs): Values for properties in the new record, e.g User(name="Bob")
 
     Notes:
-        Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)
+        Entities can be directly compared for equality each other e.g.
+        ```entity.get(some_key) == entity.get(some_key)```
     """
     __metaclass__ = BaseEntityMeta
 
