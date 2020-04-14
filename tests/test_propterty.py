@@ -46,8 +46,10 @@ class PropertiesTestCase(unittest.TestCase):
         self.assertInvalidValues("text_property", 10, {}, [])
 
     def test_datetime_property(self):
-        self.assertIsInstance(self.entity.auto_now_add_property, datetime)
         now = datetime.now()
+        self.assertIsInstance(self.entity.auto_now_add_property, datetime)
+        # Test that the vale was just assigned on read
+        self.assertTrue(now < self.entity.auto_now_add_property < datetime.now())
         self.entity.datetime_property = now
         self.entity.auto_now_add_property = now
         self.assertEqual(self.entity.__datastore_entity__.get("datetime_property"), now)
