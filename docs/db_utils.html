@@ -47,8 +47,7 @@ def put_async(entities):
     &#34;&#34;&#34;
     if not hasattr(entities, &#34;__iter__&#34;):
         entities = [entities]
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        return executor.submit(__process_and_put_entities, entities)
+    return __executor().submit(__process_and_put_entities, entities)
 
 
 def delete(entities):
@@ -58,8 +57,7 @@ def delete(entities):
 def delete_async(entities):
     if not hasattr(entities, &#34;__iter__&#34;):
         entities = [entities]
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        return executor.submit(__process_and_delete_entities, entities)
+    return __executor().submit(__process_and_delete_entities, entities)
 
 
 def __process_and_put_entities(entities):
@@ -85,6 +83,12 @@ def __process_and_delete_entities(entities):
         entity.pre_delete()
         datastore_keys.append(entity.key())
     __client__().delete_multi(datastore_keys)
+
+
+def __executor():
+    if not hasattr(builtins, &#34;__datastore_executor__&#34;):
+        setattr(builtins, &#34;__datastore_executor__&#34;, ThreadPoolExecutor(max_workers=2))
+    return getattr(builtins, &#34;__datastore_executor__&#34;)
 
 
 def __client__():
@@ -125,8 +129,7 @@ def __client__():
 <pre><code class="python">def delete_async(entities):
     if not hasattr(entities, &#34;__iter__&#34;):
         entities = [entities]
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        return executor.submit(__process_and_delete_entities, entities)</code></pre>
+    return __executor().submit(__process_and_delete_entities, entities)</code></pre>
 </details>
 </dd>
 <dt id="echo.datastore.db_utils.put"><code class="name flex">
@@ -180,8 +183,7 @@ def __client__():
     &#34;&#34;&#34;
     if not hasattr(entities, &#34;__iter__&#34;):
         entities = [entities]
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        return executor.submit(__process_and_put_entities, entities)</code></pre>
+    return __executor().submit(__process_and_put_entities, entities)</code></pre>
 </details>
 </dd>
 </dl>

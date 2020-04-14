@@ -164,7 +164,8 @@ Creates a datastore document under the entity [EntityName]
 
 #### Notes
 
-Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)
+Entities can be directly compared for equality each other e.g.
+```entity.get(some_key) == entity.get(some_key)```
 
 
 

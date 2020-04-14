@@ -24,11 +24,12 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey
+<pre><code class="python">from google.cloud.datastore import Entity as DatastoreEntity, Key as DatastoreKey
 from six import string_types
-from echo.datastore.errors import InvalidKeyError, NotSavedException, InvalidValueError
+from echo.datastore.errors import InvalidKeyError, NotSavedException
 from echo.datastore import properties, db_utils
 
+# Override documentation for paths in this dictionary
 __pdoc__ = {}
 
 
@@ -51,7 +52,8 @@ class Entity(object):
         **data (kwargs): Values for properties in the new record, e.g User(name=&#34;Bob&#34;)
 
     Notes:
-        Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)
+        Entities can be directly compared for equality each other e.g.
+        ```entity.get(some_key) == entity.get(some_key)```
     &#34;&#34;&#34;
     __metaclass__ = BaseEntityMeta
 
@@ -354,7 +356,8 @@ class Key(DatastoreKey):
 <dd>Values for properties in the new record, e.g User(name="Bob")</dd>
 </dl>
 <h2 id="notes">Notes</h2>
-<p>Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)</p></section>
+<p>Entities can be directly compared for equality each other e.g.
+<code>entity.get(some_key) == entity.get(some_key)</code></p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -366,7 +369,8 @@ class Key(DatastoreKey):
         **data (kwargs): Values for properties in the new record, e.g User(name=&#34;Bob&#34;)
 
     Notes:
-        Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)
+        Entities can be directly compared for equality each other e.g.
+        ```entity.get(some_key) == entity.get(some_key)```
     &#34;&#34;&#34;
     __metaclass__ = BaseEntityMeta
 
