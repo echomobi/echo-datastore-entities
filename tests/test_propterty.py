@@ -46,10 +46,15 @@ class PropertiesTestCase(unittest.TestCase):
 
     def test_datetime_property(self):
         now = datetime.now()
+        now_with_tz = pytz.utc.localize(datetime.now())
         self.assertIsInstance(self.entity.auto_now_add_property, datetime)
         self.entity.datetime_property = now
-        self.entity.auto_now_add_property = now
-        self.assertEqual(self.entity.__datastore_entity__.get("datetime_property"), now)
-        self.assertEqual(self.entity.__datastore_entity__.get("auto_now_add_property"), now)
+        self.entity.auto_now_add_property = now_with_tz
+        # confirm that we set timezone info
+        self.assertIsNone(now.tzinfo)
+        self.assertIsNotNone(self.entity.datetime_property.tzinfo)
+        self.assertEqual(self.entity.__datastore_entity__.get("datetime_property"), pytz.utc.localize(now))
+        self.assertEqual(self.entity.__datastore_entity__.get("auto_now_add_property"), now_with_tz)
+        # Date unaware time
         now_date = now.date()
         self.assertInvalidValues("datetime_property", now_date, "10th May 2019", 1232413213)
