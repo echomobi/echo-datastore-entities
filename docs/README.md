@@ -60,6 +60,30 @@ links-as-notes: true
 
 
     
+### Function `delete` {#echo.datastore.db_utils.delete}
+
+
+
+    
+> `def delete(entities)`
+
+
+
+
+
+    
+### Function `delete_async` {#echo.datastore.db_utils.delete_async}
+
+
+
+    
+> `def delete_async(entities)`
+
+
+
+
+
+    
 ### Function `put` {#echo.datastore.db_utils.put}
 
 
@@ -136,6 +160,11 @@ Creates a datastore document under the entity [EntityName]
 **`**data`** :&ensp;`kwargs`
 :   Values for properties in the new record, e.g User(name="Bob")
 
+
+
+#### Notes
+
+Entities can be directly compared for equality each other e.g. entity.get(some_key) == entity.get(some_key)
 
 
 
@@ -252,6 +281,18 @@ A iterable query instance; call fetch() to get the results as a list.
 
 
     
+##### Method `delete` {#echo.datastore.entity.Entity.delete}
+
+
+
+    
+> `def delete(self)`
+
+
+Delete an entity from datastore
+
+
+    
 ##### Method `is_saved` {#echo.datastore.entity.Entity.is_saved}
 
 
@@ -317,6 +358,18 @@ Override this function to run logic after saving the entity
 ###### Notes
 
 This function won't be called if there're no changes
+
+
+    
+##### Method `pre_delete` {#echo.datastore.entity.Entity.pre_delete}
+
+
+
+    
+> `def pre_delete(self)`
+
+
+Override this function to run any logic before deleting the entity. e.g. clear cache
 
 
     

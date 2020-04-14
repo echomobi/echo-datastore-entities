@@ -48,10 +48,21 @@ def put_async(entities):
     if not hasattr(entities, &#34;__iter__&#34;):
         entities = [entities]
     with ThreadPoolExecutor(max_workers=2) as executor:
-        return executor.submit(__process_and_put_entities__, entities)
+        return executor.submit(__process_and_put_entities, entities)
 
 
-def __process_and_put_entities__(entities):
+def delete(entities):
+    return delete_async(entities).result()
+
+
+def delete_async(entities):
+    if not hasattr(entities, &#34;__iter__&#34;):
+        entities = [entities]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        return executor.submit(__process_and_delete_entities, entities)
+
+
+def __process_and_put_entities(entities):
     datastore_entities = []
     changed_entities = []
     for entity in entities:
@@ -68,6 +79,14 @@ def __process_and_put_entities__(entities):
             entity.__changes__ = []
 
 
+def __process_and_delete_entities(entities):
+    datastore_keys = []
+    for entity in entities:
+        entity.pre_delete()
+        datastore_keys.append(entity.key())
+    __client__().delete_multi(datastore_keys)
+
+
 def __client__():
     if not hasattr(builtins, &#34;__datastore_client__&#34;):
         setattr(builtins, &#34;__datastore_client__&#34;, Client())
@@ -81,6 +100,35 @@ def __client__():
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="echo.datastore.db_utils.delete"><code class="name flex">
+<span>def <span class="ident">delete</span></span>(<span>entities)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def delete(entities):
+    return delete_async(entities).result()</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.db_utils.delete_async"><code class="name flex">
+<span>def <span class="ident">delete_async</span></span>(<span>entities)</span>
+</code></dt>
+<dd>
+<section class="desc"></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def delete_async(entities):
+    if not hasattr(entities, &#34;__iter__&#34;):
+        entities = [entities]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        return executor.submit(__process_and_delete_entities, entities)</code></pre>
+</details>
+</dd>
 <dt id="echo.datastore.db_utils.put"><code class="name flex">
 <span>def <span class="ident">put</span></span>(<span>entities)</span>
 </code></dt>
@@ -133,7 +181,7 @@ def __client__():
     if not hasattr(entities, &#34;__iter__&#34;):
         entities = [entities]
     with ThreadPoolExecutor(max_workers=2) as executor:
-        return executor.submit(__process_and_put_entities__, entities)</code></pre>
+        return executor.submit(__process_and_put_entities, entities)</code></pre>
 </details>
 </dd>
 </dl>
@@ -154,6 +202,8 @@ def __client__():
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="echo.datastore.db_utils.delete" href="#echo.datastore.db_utils.delete">delete</a></code></li>
+<li><code><a title="echo.datastore.db_utils.delete_async" href="#echo.datastore.db_utils.delete_async">delete_async</a></code></li>
 <li><code><a title="echo.datastore.db_utils.put" href="#echo.datastore.db_utils.put">put</a></code></li>
 <li><code><a title="echo.datastore.db_utils.put_async" href="#echo.datastore.db_utils.put_async">put_async</a></code></li>
 </ul>

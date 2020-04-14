@@ -107,7 +107,6 @@ class TestEntityTestCase(unittest.TestCase):
         self.assertNotEqual(entity, separate_entity)
         separate_entity.put()
         self.assertNotEqual(saved_entity, separate_entity)
-        self.assertEqual(saved_entity, entity)
         self.assertEqual(separate_entity, TestEntity.get(separate_entity.key()))
 
     def test_put(self):
