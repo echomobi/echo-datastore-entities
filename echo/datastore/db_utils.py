@@ -21,8 +21,7 @@ def put_async(entities):
     """
     if not hasattr(entities, "__iter__"):
         entities = [entities]
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        return executor.submit(__process_and_put_entities, entities)
+    return __executor().submit(__process_and_put_entities, entities)
 
 
 def delete(entities):
@@ -32,8 +31,7 @@ def delete(entities):
 def delete_async(entities):
     if not hasattr(entities, "__iter__"):
         entities = [entities]
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        return executor.submit(__process_and_delete_entities, entities)
+    return __executor().submit(__process_and_delete_entities, entities)
 
 
 def __process_and_put_entities(entities):
@@ -59,6 +57,12 @@ def __process_and_delete_entities(entities):
         entity.pre_delete()
         datastore_keys.append(entity.key())
     __client__().delete_multi(datastore_keys)
+
+
+def __executor():
+    if not hasattr(builtins, "__datastore_executor__"):
+        setattr(builtins, "__datastore_executor__", ThreadPoolExecutor(max_workers=2))
+    return getattr(builtins, "__datastore_executor__")
 
 
 def __client__():
