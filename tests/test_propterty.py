@@ -15,6 +15,7 @@ class TestEntity(db.Entity):
 
 class PropertiesTestCase(unittest.TestCase):
     def setUp(self):
+        self.start_time = datetime.now()
         self.entity = TestEntity()
 
     def assertInvalidValues(self, field, *invalid_values):
@@ -48,8 +49,8 @@ class PropertiesTestCase(unittest.TestCase):
     def test_datetime_property(self):
         now = datetime.now()
         self.assertIsInstance(self.entity.auto_now_add_property, datetime)
-        # Test that the vale was just assigned on read
-        self.assertTrue(now < self.entity.auto_now_add_property < datetime.now())
+        # Test that the vale was set at initialization of the property
+        self.assertTrue(self.start_time < self.entity.auto_now_add_property < now)
         self.entity.datetime_property = now
         self.entity.auto_now_add_property = now
         self.assertEqual(self.entity.__datastore_entity__.get("datetime_property"), now)
