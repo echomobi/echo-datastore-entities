@@ -1,2 +1,5 @@
 google-cloud-datastore==1.11.0
+# Allows compatibility between python2 and 3. e.g. getting builtins in both versions
 future==0.18.2
+# Used to run asynchronous tasks, provides thread pool executor
+futures==3.1.1

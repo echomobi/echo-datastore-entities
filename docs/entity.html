@@ -24,14 +24,18 @@
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">from google.cloud.datastore import Client, Entity as DatastoreEntity, Key as DatastoreKey
+<pre><code class="python">from google.cloud.datastore import Entity as DatastoreEntity, Key as DatastoreKey
 from six import string_types
-from future import builtins
 from echo.datastore.errors import InvalidKeyError, NotSavedException
-from echo.datastore import properties
+from echo.datastore import properties, db_utils
+
+# Override documentation for paths in this dictionary
+__pdoc__ = {}
 
 
 class BaseEntityMeta(type):
+    __pdoc__[&#39;BaseEntityMeta&#39;] = False
+
     # Needed to support setting property names on python2
     def __new__(mcls, name, bases, attrs):
         cls = super(BaseEntityMeta, mcls).__new__(mcls, name, bases, attrs)
@@ -47,41 +51,52 @@ class Entity(object):
     Args:
         **data (kwargs): Values for properties in the new record, e.g User(name=&#34;Bob&#34;)
 
-    Attributes:
-        id (str or int): Unique id identifying this record,
-            if auto-generated, this is not available before `put()`
+    Notes:
+        Entities can be directly compared for equality each other e.g.
+        ```entity.get(some_key) == entity.get(some_key)```
     &#34;&#34;&#34;
     __metaclass__ = BaseEntityMeta
 
     def __init__(self, **data):
         if type(self) is Entity:
             raise Exception(&#34;You must extend Entity&#34;)
-        self.__id = None
-        if &#34;id&#34; in data:
-            self.__id = data.get(&#34;id&#34;)
-        self.__datastore_entity__ = DatastoreEntity(key=self.key(partial=True))
+        project = db_utils.__client__().project
+        self.__changes__ = []
+        if &#34;__entity__&#34; in data:
+            self.__datastore_entity__ = data.get(&#34;__entity__&#34;)
+            del data[&#34;__entity__&#34;]
+        elif &#34;id&#34; in data:
+            self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), data.get(&#34;id&#34;), project=project))
+            del data[&#34;id&#34;]
+        else:
+            self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), project=project))
+
         for key, value in data.items():
             setattr(self, key, value)
+        self.__field_set = self.__get_field_set()
 
-    def key(self, partial=False):
+    def __get_field_set(self):
+        props = []
+        for key, value in self.__class__.__dict__.items():
+            try:
+                if issubclass(value.__class__, properties.Property):
+                    props.append((key, value.required, value.default))
+            except TypeError:
+                pass
+        return props
+
+    def key(self):
         &#34;&#34;&#34;Generates a key for this Entity
-        Args:
-            partial: Returns a partial key if an ID doesn&#39;t exist
-
         Returns:
             An instance of a key, convert to string to get a urlsafe key
 
         Raises:
-            NotSavedException: Raised if reading a key of an unsaved entity unless partial is true or the ID is
-            explicitly provided
+            NotSavedException: Raised if reading a key of an unsaved entity unless the ID is
+                explicitly provided
         &#34;&#34;&#34;
-        paths = [self.__entity_name__()]
-        if not self.__id and not partial:
+        if self.__datastore_entity__.key.is_partial:
             raise NotSavedException()
-        if self.__id:
-            paths.append(self.__id)
-        project = Entity.__get_client__().project
-        return Key(*paths, project=project)
+        return Key(*self.__datastore_entity__.key.flat_path, project=db_utils.__client__().project)
 
     @classmethod
     def get(cls, key):
@@ -107,10 +122,9 @@ class Entity(object):
 
         if not isinstance(key, Key) or cls.__entity_name__() != key.kind:
             raise InvalidKeyError(cls)
-        ds_entity = Entity.__get_client__().get(key=key)
+        ds_entity = db_utils.__client__().get(key=key)
         if ds_entity:
-            entity = cls(id=key.id_or_name)
-            entity.__datastore_entity__ = ds_entity
+            entity = cls(__entity__=ds_entity)
             return entity
 
     @classmethod
@@ -126,7 +140,7 @@ class Entity(object):
 
             Returns None if the id doesn&#39;t exist in the database
         &#34;&#34;&#34;
-        key = Key(cls.__name__, entity_id, project=cls.__get_client__().project)
+        key = Key(cls.__name__, entity_id, project=db_utils.__client__().project)
         return cls.get(key)
 
     @classmethod
@@ -149,15 +163,57 @@ class Entity(object):
         &#34;&#34;&#34;
         return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
 
+    def is_saved(self):
+        &#34;&#34;&#34;Checks if an entity has any changes since read via get or query or last put.
+        Always returns true for a new entity
+
+        Returns:
+            Boolean: True if no changes have been made
+        &#34;&#34;&#34;
+        if self.__changes__ or self.__datastore_entity__.key.is_partial:
+            return False
+        return True
+
+    def __pre_put_check__(self):
+        for name, required, default in self.__field_set:
+            if name not in self.__datastore_entity__:
+                if default is None and required:
+                    raise ValueError(&#34;Required field &#39;%s&#39; is not set for %s&#34; % (name, self.__entity_name__()))
+                if default is not None:
+                    self.__datastore_entity__[name] = default
+
+    def put(self):
+        &#34;&#34;&#34;Save changes made on this entity to datastore. Won&#39;t call datastore if no changes were made&#34;&#34;&#34;
+        db_utils.put(self)
+
+    def post_put(self, changes):
+        &#34;&#34;&#34;Override this function to run logic after saving the entity
+
+        Args:
+            changes (list): A list of fields that have been updated during put
+
+        Notes:
+            This function won&#39;t be called if there&#39;re no changes
+        &#34;&#34;&#34;
+
+    def pre_put(self):
+        &#34;&#34;&#34;Override this function to run logic just before saving the entity
+        NB: This function won&#39;t be called if no changes were made. i.e. when self.is_saved() == True
+        &#34;&#34;&#34;
+
+    def delete(self):
+        &#34;&#34;&#34;Delete an entity from datastore&#34;&#34;&#34;
+        db_utils.delete(self)
+
+    def pre_delete(self):
+        &#34;&#34;&#34;Override this function to run any logic before deleting the entity. e.g. clear cache&#34;&#34;&#34;
+
     @classmethod
     def __entity_name__(cls):
         return cls.__name__
 
-    @staticmethod
-    def __get_client__():
-        if not hasattr(builtins, &#34;__datastore_client__&#34;):
-            setattr(builtins, &#34;__datastore_client__&#34;, Client())
-        return getattr(builtins, &#34;__datastore_client__&#34;)
+    def __eq__(self, other):
+        return self.__datastore_entity__ == other.__datastore_entity__
 
 
 class Query(object):
@@ -167,7 +223,7 @@ class Query(object):
             order = order_by
         elif isinstance(order_by, str):
             order = [order_by]
-        self.__datastore_query = Entity.__get_client__().query(kind=entity.__entity_name__(), order=order)
+        self.__datastore_query = db_utils.__client__().query(kind=entity.__entity_name__(), order=order)
         self.entity = entity
         self.keys_only = keys_only
         if keys_only:
@@ -250,9 +306,8 @@ class Query(object):
     def __process_result_item(self, result_item):
         if self.keys_only:
             # The result is a datastore entity with only a key
-            return Key(result_item.kind, result_item.id, project=Entity.__get_client__().project)
-        entity = self.entity(id=result_item.id)
-        entity.__datastore_entity__ = result_item
+            return Key(result_item.kind, result_item.id, project=db_utils.__client__().project)
+        entity = self.entity(__entity__=result_item)
         return entity
 
     def __iter__(self):
@@ -262,6 +317,8 @@ class Query(object):
         if not self.__iterator:
             self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
         return self.__process_result_item(self.__iterator.__next__())
+
+    __pdoc__[&#34;Query.next&#34;] = False
 
     def next(self):
         # Support python2 iterators
@@ -287,32 +344,6 @@ class Key(DatastoreKey):
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="echo.datastore.entity.BaseEntityMeta"><code class="flex name class">
-<span>class <span class="ident">BaseEntityMeta</span></span>
-<span>(</span><span>name, bases, attrs)</span>
-</code></dt>
-<dd>
-<section class="desc"><p>type(object_or_name, bases, dict)
-type(object) -&gt; the object's type
-type(name, bases, dict) -&gt; a new type</p></section>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class BaseEntityMeta(type):
-    # Needed to support setting property names on python2
-    def __new__(mcls, name, bases, attrs):
-        cls = super(BaseEntityMeta, mcls).__new__(mcls, name, bases, attrs)
-        for attr, obj in attrs.items():
-            if isinstance(obj, properties.Property):
-                obj.__set_name__(cls, attr)
-        return cls</code></pre>
-</details>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li>builtins.type</li>
-</ul>
-</dd>
 <dt id="echo.datastore.entity.Entity"><code class="flex name class">
 <span>class <span class="ident">Entity</span></span>
 <span>(</span><span>**data)</span>
@@ -324,12 +355,9 @@ type(name, bases, dict) -&gt; a new type</p></section>
 <dt><strong><code>**data</code></strong> :&ensp;<code>kwargs</code></dt>
 <dd>Values for properties in the new record, e.g User(name="Bob")</dd>
 </dl>
-<h2 id="attributes">Attributes</h2>
-<dl>
-<dt><strong><code>id</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
-<dd>Unique id identifying this record,
-if auto-generated, this is not available before <code>put()</code></dd>
-</dl></section>
+<h2 id="notes">Notes</h2>
+<p>Entities can be directly compared for equality each other e.g.
+<code>entity.get(some_key) == entity.get(some_key)</code></p></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -340,41 +368,52 @@ if auto-generated, this is not available before <code>put()</code></dd>
     Args:
         **data (kwargs): Values for properties in the new record, e.g User(name=&#34;Bob&#34;)
 
-    Attributes:
-        id (str or int): Unique id identifying this record,
-            if auto-generated, this is not available before `put()`
+    Notes:
+        Entities can be directly compared for equality each other e.g.
+        ```entity.get(some_key) == entity.get(some_key)```
     &#34;&#34;&#34;
     __metaclass__ = BaseEntityMeta
 
     def __init__(self, **data):
         if type(self) is Entity:
             raise Exception(&#34;You must extend Entity&#34;)
-        self.__id = None
-        if &#34;id&#34; in data:
-            self.__id = data.get(&#34;id&#34;)
-        self.__datastore_entity__ = DatastoreEntity(key=self.key(partial=True))
+        project = db_utils.__client__().project
+        self.__changes__ = []
+        if &#34;__entity__&#34; in data:
+            self.__datastore_entity__ = data.get(&#34;__entity__&#34;)
+            del data[&#34;__entity__&#34;]
+        elif &#34;id&#34; in data:
+            self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), data.get(&#34;id&#34;), project=project))
+            del data[&#34;id&#34;]
+        else:
+            self.__datastore_entity__ = DatastoreEntity(key=Key(self.__entity_name__(), project=project))
+
         for key, value in data.items():
             setattr(self, key, value)
+        self.__field_set = self.__get_field_set()
 
-    def key(self, partial=False):
+    def __get_field_set(self):
+        props = []
+        for key, value in self.__class__.__dict__.items():
+            try:
+                if issubclass(value.__class__, properties.Property):
+                    props.append((key, value.required, value.default))
+            except TypeError:
+                pass
+        return props
+
+    def key(self):
         &#34;&#34;&#34;Generates a key for this Entity
-        Args:
-            partial: Returns a partial key if an ID doesn&#39;t exist
-
         Returns:
             An instance of a key, convert to string to get a urlsafe key
 
         Raises:
-            NotSavedException: Raised if reading a key of an unsaved entity unless partial is true or the ID is
-            explicitly provided
+            NotSavedException: Raised if reading a key of an unsaved entity unless the ID is
+                explicitly provided
         &#34;&#34;&#34;
-        paths = [self.__entity_name__()]
-        if not self.__id and not partial:
+        if self.__datastore_entity__.key.is_partial:
             raise NotSavedException()
-        if self.__id:
-            paths.append(self.__id)
-        project = Entity.__get_client__().project
-        return Key(*paths, project=project)
+        return Key(*self.__datastore_entity__.key.flat_path, project=db_utils.__client__().project)
 
     @classmethod
     def get(cls, key):
@@ -400,10 +439,9 @@ if auto-generated, this is not available before <code>put()</code></dd>
 
         if not isinstance(key, Key) or cls.__entity_name__() != key.kind:
             raise InvalidKeyError(cls)
-        ds_entity = Entity.__get_client__().get(key=key)
+        ds_entity = db_utils.__client__().get(key=key)
         if ds_entity:
-            entity = cls(id=key.id_or_name)
-            entity.__datastore_entity__ = ds_entity
+            entity = cls(__entity__=ds_entity)
             return entity
 
     @classmethod
@@ -419,7 +457,7 @@ if auto-generated, this is not available before <code>put()</code></dd>
 
             Returns None if the id doesn&#39;t exist in the database
         &#34;&#34;&#34;
-        key = Key(cls.__name__, entity_id, project=cls.__get_client__().project)
+        key = Key(cls.__name__, entity_id, project=db_utils.__client__().project)
         return cls.get(key)
 
     @classmethod
@@ -442,15 +480,57 @@ if auto-generated, this is not available before <code>put()</code></dd>
         &#34;&#34;&#34;
         return Query(cls, keys_only=keys_only, eventual=eventual, limit=limit, order_by=order_by)
 
+    def is_saved(self):
+        &#34;&#34;&#34;Checks if an entity has any changes since read via get or query or last put.
+        Always returns true for a new entity
+
+        Returns:
+            Boolean: True if no changes have been made
+        &#34;&#34;&#34;
+        if self.__changes__ or self.__datastore_entity__.key.is_partial:
+            return False
+        return True
+
+    def __pre_put_check__(self):
+        for name, required, default in self.__field_set:
+            if name not in self.__datastore_entity__:
+                if default is None and required:
+                    raise ValueError(&#34;Required field &#39;%s&#39; is not set for %s&#34; % (name, self.__entity_name__()))
+                if default is not None:
+                    self.__datastore_entity__[name] = default
+
+    def put(self):
+        &#34;&#34;&#34;Save changes made on this entity to datastore. Won&#39;t call datastore if no changes were made&#34;&#34;&#34;
+        db_utils.put(self)
+
+    def post_put(self, changes):
+        &#34;&#34;&#34;Override this function to run logic after saving the entity
+
+        Args:
+            changes (list): A list of fields that have been updated during put
+
+        Notes:
+            This function won&#39;t be called if there&#39;re no changes
+        &#34;&#34;&#34;
+
+    def pre_put(self):
+        &#34;&#34;&#34;Override this function to run logic just before saving the entity
+        NB: This function won&#39;t be called if no changes were made. i.e. when self.is_saved() == True
+        &#34;&#34;&#34;
+
+    def delete(self):
+        &#34;&#34;&#34;Delete an entity from datastore&#34;&#34;&#34;
+        db_utils.delete(self)
+
+    def pre_delete(self):
+        &#34;&#34;&#34;Override this function to run any logic before deleting the entity. e.g. clear cache&#34;&#34;&#34;
+
     @classmethod
     def __entity_name__(cls):
         return cls.__name__
 
-    @staticmethod
-    def __get_client__():
-        if not hasattr(builtins, &#34;__datastore_client__&#34;):
-            setattr(builtins, &#34;__datastore_client__&#34;, Client())
-        return getattr(builtins, &#34;__datastore_client__&#34;)</code></pre>
+    def __eq__(self, other):
+        return self.__datastore_entity__ == other.__datastore_entity__</code></pre>
 </details>
 <h3>Static methods</h3>
 <dl>
@@ -504,10 +584,9 @@ def get(cls, key):
 
     if not isinstance(key, Key) or cls.__entity_name__() != key.kind:
         raise InvalidKeyError(cls)
-    ds_entity = Entity.__get_client__().get(key=key)
+    ds_entity = db_utils.__client__().get(key=key)
     if ds_entity:
-        entity = cls(id=key.id_or_name)
-        entity.__datastore_entity__ = ds_entity
+        entity = cls(__entity__=ds_entity)
         return entity</code></pre>
 </details>
 </dd>
@@ -545,7 +624,7 @@ def get_by_id(cls, entity_id):
 
         Returns None if the id doesn&#39;t exist in the database
     &#34;&#34;&#34;
-    key = Key(cls.__name__, entity_id, project=cls.__get_client__().project)
+    key = Key(cls.__name__, entity_id, project=db_utils.__client__().project)
     return cls.get(key)</code></pre>
 </details>
 </dd>
@@ -597,16 +676,52 @@ def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
 </dl>
 <h3>Methods</h3>
 <dl>
+<dt id="echo.datastore.entity.Entity.delete"><code class="name flex">
+<span>def <span class="ident">delete</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Delete an entity from datastore</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def delete(self):
+    &#34;&#34;&#34;Delete an entity from datastore&#34;&#34;&#34;
+    db_utils.delete(self)</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Entity.is_saved"><code class="name flex">
+<span>def <span class="ident">is_saved</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Checks if an entity has any changes since read via get or query or last put.
+Always returns true for a new entity</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><strong><code>Boolean</code></strong></dt>
+<dd>True if no changes have been made</dd>
+</dl></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def is_saved(self):
+    &#34;&#34;&#34;Checks if an entity has any changes since read via get or query or last put.
+    Always returns true for a new entity
+
+    Returns:
+        Boolean: True if no changes have been made
+    &#34;&#34;&#34;
+    if self.__changes__ or self.__datastore_entity__.key.is_partial:
+        return False
+    return True</code></pre>
+</details>
+</dd>
 <dt id="echo.datastore.entity.Entity.key"><code class="name flex">
-<span>def <span class="ident">key</span></span>(<span>self, partial=False)</span>
+<span>def <span class="ident">key</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <section class="desc"><p>Generates a key for this Entity</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>partial</code></strong></dt>
-<dd>Returns a partial key if an ID doesn't exist</dd>
-</dl>
 <h2 id="returns">Returns</h2>
 <dl>
 <dt><code>An</code> <code>instance</code> of <code>a</code> <code>key</code>, <code>convert</code> <code>to</code> <code>string</code> <code>to</code> <code>get</code> <code>a</code> <code>urlsafe</code> <code>key</code></dt>
@@ -615,33 +730,95 @@ def query(cls, limit=None, eventual=False, keys_only=False, order_by=None):
 <h2 id="raises">Raises</h2>
 <dl>
 <dt><strong><code>NotSavedException</code></strong></dt>
-<dd>Raised if reading a key of an unsaved entity unless partial is true or the ID is</dd>
-<dt><code>explicitly</code> <code>provided</code></dt>
-<dd>&nbsp;</dd>
+<dd>Raised if reading a key of an unsaved entity unless the ID is
+explicitly provided</dd>
 </dl></section>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def key(self, partial=False):
+<pre><code class="python">def key(self):
     &#34;&#34;&#34;Generates a key for this Entity
-    Args:
-        partial: Returns a partial key if an ID doesn&#39;t exist
-
     Returns:
         An instance of a key, convert to string to get a urlsafe key
 
     Raises:
-        NotSavedException: Raised if reading a key of an unsaved entity unless partial is true or the ID is
-        explicitly provided
+        NotSavedException: Raised if reading a key of an unsaved entity unless the ID is
+            explicitly provided
     &#34;&#34;&#34;
-    paths = [self.__entity_name__()]
-    if not self.__id and not partial:
+    if self.__datastore_entity__.key.is_partial:
         raise NotSavedException()
-    if self.__id:
-        paths.append(self.__id)
-    project = Entity.__get_client__().project
-    return Key(*paths, project=project)</code></pre>
+    return Key(*self.__datastore_entity__.key.flat_path, project=db_utils.__client__().project)</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Entity.post_put"><code class="name flex">
+<span>def <span class="ident">post_put</span></span>(<span>self, changes)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Override this function to run logic after saving the entity</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>changes</code></strong> :&ensp;<code>list</code></dt>
+<dd>A list of fields that have been updated during put</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>This function won't be called if there're no changes</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def post_put(self, changes):
+    &#34;&#34;&#34;Override this function to run logic after saving the entity
+
+    Args:
+        changes (list): A list of fields that have been updated during put
+
+    Notes:
+        This function won&#39;t be called if there&#39;re no changes
+    &#34;&#34;&#34;</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Entity.pre_delete"><code class="name flex">
+<span>def <span class="ident">pre_delete</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Override this function to run any logic before deleting the entity. e.g. clear cache</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def pre_delete(self):
+    &#34;&#34;&#34;Override this function to run any logic before deleting the entity. e.g. clear cache&#34;&#34;&#34;</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Entity.pre_put"><code class="name flex">
+<span>def <span class="ident">pre_put</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Override this function to run logic just before saving the entity
+NB: This function won't be called if no changes were made. i.e. when self.is_saved() == True</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def pre_put(self):
+    &#34;&#34;&#34;Override this function to run logic just before saving the entity
+    NB: This function won&#39;t be called if no changes were made. i.e. when self.is_saved() == True
+    &#34;&#34;&#34;</code></pre>
+</details>
+</dd>
+<dt id="echo.datastore.entity.Entity.put"><code class="name flex">
+<span>def <span class="ident">put</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<section class="desc"><p>Save changes made on this entity to datastore. Won't call datastore if no changes were made</p></section>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def put(self):
+    &#34;&#34;&#34;Save changes made on this entity to datastore. Won&#39;t call datastore if no changes were made&#34;&#34;&#34;
+    db_utils.put(self)</code></pre>
 </details>
 </dd>
 </dl>
@@ -759,7 +936,7 @@ length) key path.</p>
             order = order_by
         elif isinstance(order_by, str):
             order = [order_by]
-        self.__datastore_query = Entity.__get_client__().query(kind=entity.__entity_name__(), order=order)
+        self.__datastore_query = db_utils.__client__().query(kind=entity.__entity_name__(), order=order)
         self.entity = entity
         self.keys_only = keys_only
         if keys_only:
@@ -842,9 +1019,8 @@ length) key path.</p>
     def __process_result_item(self, result_item):
         if self.keys_only:
             # The result is a datastore entity with only a key
-            return Key(result_item.kind, result_item.id, project=Entity.__get_client__().project)
-        entity = self.entity(id=result_item.id)
-        entity.__datastore_entity__ = result_item
+            return Key(result_item.kind, result_item.id, project=db_utils.__client__().project)
+        entity = self.entity(__entity__=result_item)
         return entity
 
     def __iter__(self):
@@ -854,6 +1030,8 @@ length) key path.</p>
         if not self.__iterator:
             self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
         return self.__process_result_item(self.__iterator.__next__())
+
+    __pdoc__[&#34;Query.next&#34;] = False
 
     def next(self):
         # Support python2 iterators
@@ -1054,22 +1232,6 @@ length) key path.</p>
     return self</code></pre>
 </details>
 </dd>
-<dt id="echo.datastore.entity.Query.next"><code class="name flex">
-<span>def <span class="ident">next</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<section class="desc"></section>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def next(self):
-    # Support python2 iterators
-    if not self.__iterator:
-        self.__iterator = self.__datastore_query.fetch(limit=self.limit, eventual=self.eventual).__iter__()
-    return self.__process_result_item(self.__iterator.next())</code></pre>
-</details>
-</dd>
 </dl>
 </dd>
 </dl>
@@ -1089,14 +1251,17 @@ length) key path.</p>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="echo.datastore.entity.BaseEntityMeta" href="#echo.datastore.entity.BaseEntityMeta">BaseEntityMeta</a></code></h4>
-</li>
-<li>
 <h4><code><a title="echo.datastore.entity.Entity" href="#echo.datastore.entity.Entity">Entity</a></code></h4>
-<ul class="">
+<ul class="two-column">
+<li><code><a title="echo.datastore.entity.Entity.delete" href="#echo.datastore.entity.Entity.delete">delete</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.get" href="#echo.datastore.entity.Entity.get">get</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.get_by_id" href="#echo.datastore.entity.Entity.get_by_id">get_by_id</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.is_saved" href="#echo.datastore.entity.Entity.is_saved">is_saved</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.key" href="#echo.datastore.entity.Entity.key">key</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.post_put" href="#echo.datastore.entity.Entity.post_put">post_put</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.pre_delete" href="#echo.datastore.entity.Entity.pre_delete">pre_delete</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.pre_put" href="#echo.datastore.entity.Entity.pre_put">pre_put</a></code></li>
+<li><code><a title="echo.datastore.entity.Entity.put" href="#echo.datastore.entity.Entity.put">put</a></code></li>
 <li><code><a title="echo.datastore.entity.Entity.query" href="#echo.datastore.entity.Entity.query">query</a></code></li>
 </ul>
 </li>
@@ -1112,7 +1277,6 @@ length) key path.</p>
 <li><code><a title="echo.datastore.entity.Query.gte" href="#echo.datastore.entity.Query.gte">gte</a></code></li>
 <li><code><a title="echo.datastore.entity.Query.lt" href="#echo.datastore.entity.Query.lt">lt</a></code></li>
 <li><code><a title="echo.datastore.entity.Query.lte" href="#echo.datastore.entity.Query.lte">lte</a></code></li>
-<li><code><a title="echo.datastore.entity.Query.next" href="#echo.datastore.entity.Query.next">next</a></code></li>
 </ul>
 </li>
 </ul>

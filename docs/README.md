@@ -1,6 +1,6 @@
 ---
 description: |
-    API documentation for modules: echo.datastore, echo.datastore.db, echo.datastore.entity, echo.datastore.errors, echo.datastore.properties.
+    API documentation for modules: echo.datastore, echo.datastore.db, echo.datastore.db_utils, echo.datastore.entity, echo.datastore.errors, echo.datastore.properties.
 
 lang: en
 
@@ -24,6 +24,7 @@ links-as-notes: true
 ## Sub-modules
 
 * [echo.datastore.db](#echo.datastore.db)
+* [echo.datastore.db_utils](#echo.datastore.db_utils)
 * [echo.datastore.entity](#echo.datastore.entity)
 * [echo.datastore.errors](#echo.datastore.errors)
 * [echo.datastore.properties](#echo.datastore.properties)
@@ -46,6 +47,90 @@ links-as-notes: true
 
 
     
+# Module `echo.datastore.db_utils` {#echo.datastore.db_utils}
+
+
+
+
+
+
+
+    
+## Functions
+
+
+    
+### Function `delete` {#echo.datastore.db_utils.delete}
+
+
+
+    
+> `def delete(entities)`
+
+
+
+
+
+    
+### Function `delete_async` {#echo.datastore.db_utils.delete_async}
+
+
+
+    
+> `def delete_async(entities)`
+
+
+
+
+
+    
+### Function `put` {#echo.datastore.db_utils.put}
+
+
+
+    
+> `def put(entities)`
+
+
+Save entities to datastore
+
+
+###### Args
+
+**`entities`**
+:   An entity or a list of entities
+
+
+
+    
+### Function `put_async` {#echo.datastore.db_utils.put_async}
+
+
+
+    
+> `def put_async(entities)`
+
+
+Save to datastore asynchronously
+
+###### Args
+
+**`entities`**
+:   An entity or a list of entities
+
+
+
+###### Returns
+
+`A` `future` `object.` `Use` `future.result`() `to` `wait` `for` or `get` `the` `results` `if` `ready`
+:   &nbsp;
+
+
+
+
+
+
+    
 # Module `echo.datastore.entity` {#echo.datastore.entity}
 
 
@@ -57,30 +142,6 @@ links-as-notes: true
 
     
 ## Classes
-
-
-    
-### Class `BaseEntityMeta` {#echo.datastore.entity.BaseEntityMeta}
-
-
-
-> `class BaseEntityMeta(name, bases, attrs)`
-
-
-type(object_or_name, bases, dict)
-type(object) -> the object's type
-type(name, bases, dict) -> a new type
-
-
-
-    
-#### Ancestors (in MRO)
-
-* [builtins.type](#builtins.type)
-
-
-
-
 
 
     
@@ -101,12 +162,10 @@ Creates a datastore document under the entity [EntityName]
 
 
 
-#### Attributes
+#### Notes
 
-**`id`** :&ensp;`str` or `int`
-:   Unique id identifying this record,
-    if auto-generated, this is not available before `put()`
-
+Entities can be directly compared for equality each other e.g.
+```entity.get(some_key) == entity.get(some_key)```
 
 
 
@@ -223,22 +282,47 @@ A iterable query instance; call fetch() to get the results as a list.
 
 
     
+##### Method `delete` {#echo.datastore.entity.Entity.delete}
+
+
+
+    
+> `def delete(self)`
+
+
+Delete an entity from datastore
+
+
+    
+##### Method `is_saved` {#echo.datastore.entity.Entity.is_saved}
+
+
+
+    
+> `def is_saved(self)`
+
+
+Checks if an entity has any changes since read via get or query or last put.
+Always returns true for a new entity
+
+
+###### Returns
+
+**`Boolean`**
+:   True if no changes have been made
+
+
+
+    
 ##### Method `key` {#echo.datastore.entity.Entity.key}
 
 
 
     
-> `def key(self, partial=False)`
+> `def key(self)`
 
 
 Generates a key for this Entity
-
-###### Args
-
-**`partial`**
-:   Returns a partial key if an ID doesn't exist
-
-
 
 ###### Returns
 
@@ -248,12 +332,70 @@ Generates a key for this Entity
 ###### Raises
 
 **`NotSavedException`**
-:   Raised if reading a key of an unsaved entity unless partial is true or the ID is
+:   Raised if reading a key of an unsaved entity unless the ID is
+    explicitly provided
 
 
-`explicitly` `provided`
-:   &nbsp;
 
+    
+##### Method `post_put` {#echo.datastore.entity.Entity.post_put}
+
+
+
+    
+> `def post_put(self, changes)`
+
+
+Override this function to run logic after saving the entity
+
+
+###### Args
+
+**`changes`** :&ensp;`list`
+:   A list of fields that have been updated during put
+
+
+
+###### Notes
+
+This function won't be called if there're no changes
+
+
+    
+##### Method `pre_delete` {#echo.datastore.entity.Entity.pre_delete}
+
+
+
+    
+> `def pre_delete(self)`
+
+
+Override this function to run any logic before deleting the entity. e.g. clear cache
+
+
+    
+##### Method `pre_put` {#echo.datastore.entity.Entity.pre_put}
+
+
+
+    
+> `def pre_put(self)`
+
+
+Override this function to run logic just before saving the entity
+NB: This function won't be called if no changes were made. i.e. when self.is_saved() == True
+
+
+    
+##### Method `put` {#echo.datastore.entity.Entity.put}
+
+
+
+    
+> `def put(self)`
+
+
+Save changes made on this entity to datastore. Won't call datastore if no changes were made
 
 
     
@@ -510,18 +652,6 @@ Less Than or Equal to filter
 
 
 
-    
-##### Method `next` {#echo.datastore.entity.Query.next}
-
-
-
-    
-> `def next(self)`
-
-
-
-
-
 
 
     
@@ -633,8 +763,11 @@ Raised when a key of an unsaved model is accessed
 > `class DateTimeProperty(auto_now_add=False, required=False)`
 
 
-A class describing a typed, persisted attribute of a datastore entity
+Accepts a python datetime instance
 
+#### Notes
+
+- Dates are automatically localized to UTC
 
 #### Args
 

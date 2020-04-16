@@ -1,7 +1,6 @@
 import unittest
 from echo.datastore import db
 from google.cloud.datastore import Client, Entity as DatastoreEntity, Key
-from random import randint
 
 
 class TestEntity(db.Entity):
