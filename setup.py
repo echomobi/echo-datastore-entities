@@ -18,8 +18,9 @@ setuptools.setup(
     description="Client library for use with Google Cloud Datastore to provide an entities concept",
     long_description=long_description,
     long_description_content_type="text/markdown",
+    include_package_data=True,
     url="https://github.com/echomobi/echo-datastore-entities",
-    packages=['echo.datastore'],
+    packages=['echo', 'echo.datastore'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
