@@ -181,19 +181,18 @@ jobs:
       - run:
           name: ++ Release Package (master only)
           command: |
-            . venv/bin/activate
             if [[ $(git tag) == *v$(cat RELEASE)* ]]; then
               echo "Version $(cat RELEASE) already released"
             else
-              python setup.py sdist bdist_wheel
-              git tag v$(cat RELEASE)
               echo -e "[pypi]" >> ~/.pypirc
               echo -e "username = __token__" >> ~/.pypirc
               echo -e "password = $PYPI_RELEASE_TOKEN" >> ~/.pypirc
-              twine upload --verbose dist/*
+              . venv2/bin/activate && python setup.py bdist_wheel && deactivate
+              . venv/bin/activate && python setup.py sdist bdist_wheel && deactivate
+              . venv/bin/activate && twine upload --verbose dist/* && deactivate
+              git tag v$(cat RELEASE)
               git push --tags
             fi
-            deactivate
 
 workflows:
   version: 2
